@@ -30,7 +30,7 @@ grundregel: das glas-material liegt **immer auf einem hellen, ruhigen hintergrun
 
 - **hintergrund-basis**: sehr helles grau/off-white (z. b. `#F5F6FA`), leichter, sehr sanfter farbverlauf erlaubt (kein knalliges weiß, das ermüdet)
 - **glas-oberfläche**: weiß, transparent (siehe material oben)
-- **primärakzent (app-marke)**: ein ruhiger blau-/indigo-ton (z. b. `#5B6CFF`) — für primäre buttons, aktive states, den ki-assistenten
+- **primärakzent (app-marke)**: ein ruhiger blau-/indigo-ton, `#5260F2` — für primäre buttons, aktive states, den ki-assistenten. (im mockup nachträglich von `#5B6CFF` auf diesen etwas dunkleren ton angepasst, damit weißer text auf gefülltem hintergrund zuverlässig WCAG-AA-kontrast [≥4,5:1] erreicht — siehe §7)
 - **bereichsfarben** (fest zugeordnet, gut unterscheidbar, nicht grell):
   - privat: warmes koralle/orange
   - plenum: petrol/türkis
@@ -57,6 +57,13 @@ grundregel: das glas-material liegt **immer auf einem hellen, ruhigen hintergrun
 - **bereichs-badge**: kleines, farbiges pill-element (bereichsname + farbe), überall wo ein element einem bereich zugeordnet ist
 - **frage-überall-einstieg**: global erreichbarer, schwebender glas-button (immer gleiche position) → öffnet ki-chat als glas-panel über dem aktuellen screen (kein vollständiger screen-wechsel, kontext bleibt sichtbar)
 - **abend-check-in-karte**: eigenständig gestaltetes, etwas wärmeres glas-panel (leicht abweichender ton) für tagebuch + coach-feedback, damit dieser moment sich bewusst vom "arbeits-modus" abhebt
+- **ki-planungs-leiste** (ergänzt in mockup-iteration 2): schmale, akzent-getönte glas-leiste oben auf der tagesansicht, zeigt kompakt "was die ki schon für dich erledigt hat" (anzahl aufgaben/pausen, kalender-sync-status) + "neu planen"-link — macht ki-arbeit sichtbar statt unsichtbar im hintergrund zu laufen
+- **capture-eingabe**: bewusst reduziertes eingabefeld (nur text + mikrofon-icon für diktat), ohne pflicht-dropdowns für bereich/dauer — die einordnung passiert erst im zweiten schritt durch die ki (siehe `architecture.md` §4.1)
+- **diktier-karte** (tagebuch): auffällige, große mikrofon-schaltfläche mit warmem farbverlauf für die "ganzen tag diktieren"-funktion — bewusst die visuell dominanteste aktion auf dem abend-screen, da sie den reibungsärmsten weg ins tagebuch darstellt
+- **ebenen-navigator** (ziele-screen, überarbeitet in mockup-iteration 2): vertikale liste der fünf ziel-ebenen mit mini-fortschrittsring statt verschachtelter spalten-visualisierung — einfachere, listenartige navigation statt eines dichten "infografik"-layouts, dazu eine breadcrumb-leiste für den aktuellen pfad
+- **dashboard-kachel**: kompakte, große kennzahl (zahl zuerst, label klein darunter) für die übersicht-/fortschritts-ansicht — mehrere kacheln im raster, keine überladenen diagramme
+- **toggle/stepper** (einstellungen): einfache an/aus-schalter bzw. plus/minus-stepper statt textfelder, wo immer eine begrenzte auswahl möglich ist (adhs: weniger tipp-aufwand, weniger fehlerquellen)
+- **beta-feedback-hinweis**: kleine, dezente pille (icon + "beta") auf den kernbildschirmen, führt zu einer prominenten feedback-karte in den einstellungen — nicht aufdringlich, aber jederzeit auffindbar
 
 ## 6. bewegung & microinteractions
 

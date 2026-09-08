@@ -58,9 +58,12 @@ domain-schicht kennt keine SwiftUI- oder integrations-details → gut testbar, a
 - ziel-hierarchie als **eine entität `goal`** mit `level` (year/quarter/month/week/day) und `parent_id` (rekursiv) statt fünf separater tabellen — reduziert komplexität, erlaubt beliebige zwischenebenen später.
 - wochenziel-limit (2) und monatsziel-limit (3) sind **weiche validierung** in der domain-schicht (warnung, kein hard-block — adhs-realität: manchmal braucht es ausnahmen).
 - `task` referenziert optional ein `goal` (wirkt darauf ein) und einen `area` (bereich).
-- **PlanDayUseCase**: morgens generiert — sortiert offene tasks des tages nach (a) deadline/kalenderfixierung, (b) ziel-priorität, (c) geschätzter dauer vs. verfügbarer zeit, (d) energie-heuristik (schwere aufgaben nicht direkt nacheinander).
-- **effort estimation**: heuristik aus (1) nutzer-history ähnlicher tasks (lernend), (2) fallback-schätzung per Claude API anhand aufgabentext, (3) manuelles override immer möglich.
-- **pausen**: PlanDayUseCase plant nach ~50–90 min fokusblöcken automatisch pausen-slots ein (konfigurierbar), die ebenfalls als kalender-blocker erscheinen.
+- **zweistufiger flow** (nutzer-feedback, mockup-iteration 2 — siehe entwürfe "Capture" / "TodayDesktop"): task-erfassung und ki-planung sind bewusst **entkoppelt**:
+  1. **CaptureUseCase**: legt einen `task` mit nur `title` an — `area`, `estimated_minutes`, `scheduled_at` bleiben zunächst leer/`null`. keine pflichtfelder, kein modal, keine kategorisierung nötig (niedrigste mögliche erfassungsschwelle).
+  2. **PlanDayUseCase**: läuft explizit (nutzer tippt "ki plant meinen tag") oder automatisch zur morgen-erinnerung — reichert alle noch nicht eingeplanten tasks des tages an (bereich-erkennung, effort estimation, reihenfolge, pausen) und schreibt `scheduled_at` + `estimated_minutes`.
+  3. **CalendarExportUseCase**: läuft **automatisch im anschluss** an schritt 2 (kein manueller extra-schritt) und schreibt die geplanten tasks als events über `CalendarBridge` in den systemkalender; ein "neu planen" verwirft die bisherige zuordnung und wiederholt schritte 2–3.
+- **effort estimation**: heuristik aus (1) nutzer-history ähnlicher tasks (lernend), (2) fallback-schätzung per Claude API anhand aufgabentext, (3) manuelles override immer möglich. geschätzte werte werden in der ui als solche gekennzeichnet ("ki-geschätzt"), damit markus sieht, was automatisch kam vs. was er selbst gesetzt hat.
+- **pausen**: PlanDayUseCase plant nach ~50–90 min fokusblöcken automatisch pausen-slots ein (konfigurierbar), die ebenfalls als kalender-blocker erscheinen und in der ui als ki-vorschlag markiert sind.
 
 ### 4.2 kalender-integration
 - `CalendarBridge` (EventKit) spiegelt tasks mit start/dauer als events; änderungen im systemkalender (verschieben) fließen zurück in `task.scheduled_at`.
@@ -75,7 +78,9 @@ domain-schicht kennt keine SwiftUI- oder integrations-details → gut testbar, a
 
 ### 4.5 tagebuch
 - abend-notification (lokal, Uhrzeit einstellbar) → freitext oder diktat.
+- **diktat für den gesamten tag** (nutzer-feedback, mockup-iteration 2): eine einzelne, ununterbrochene aufnahme (nicht sektion für sektion einzeln) läuft über denselben verarbeitungs-pfad wie `TranscriptProcessorUseCase` (§4.3), das ergebnis fließt direkt in `JournalReviewUseCase`.
 - `JournalReviewUseCase` strukturiert eintrag in feste sektionen: `gratitude[3]`, `events`, `thoughts`, `feelings` (per Claude API, nutzer kann vor speichern korrigieren).
+- **erledigte todos automatisch übernehmen** (nutzer-feedback, mockup-iteration 2): `JournalReviewUseCase` liest beim öffnen des abend-eintrags die heute als `done` markierten `task`-einträge und zeigt sie als eigenen abschnitt "heute erledigt" — kein manuelles abtippen nötig, referenziert die `task`-ids statt den text zu duplizieren.
 - `CoachFeedbackUseCase` erzeugt abends kurzes feedback ("das hast du heute gut gemacht" / "das machst du inzwischen routiniert gut") — greift auf journal-historie + habit-streaks + erledigte ziele zurück, siehe `memory.md` §5.
 
 ### 4.6 habits
@@ -90,6 +95,19 @@ domain-schicht kennt keine SwiftUI- oder integrations-details → gut testbar, a
 - **Auth0**: login (macOS: system-browser-flow via ASWebAuthenticationSession; iOS: gleiches sdk). liefert `user_id` (`sub`) als stabilen fremdschlüssel für alle daten.
 - **rollenmodell**: `role` enum (`admin` | `user`) im user-profil, serverseitig geprüft sobald ein server existiert (supabase RLS), lokal clientseitig durch scoping aller queries auf `current_user_id` (admin-modus hebt das scoping für admin-uis explizit auf).
 - **Stripe**: abo-status am user-profil (`subscription_status`), zahlungsfluss läuft über Stripe Checkout/Billing Portal (webview/system-browser) — keine kartendaten im client.
+
+### 4.9 übersicht / fortschritts-dashboard
+- eigener screen, getrennt von der ziele-navigation (§4.1) — reine **lese-/aggregations-sicht**, keine bearbeitung.
+- `ProgressAggregationService` berechnet aus vorhandenen daten (keine eigene datenquelle nötig): wochen-/monatsziel-status, jahresziel-fortschritt je `area`, erledigte-todos-verlauf (letzte 7/28 tage), habit-streaks, sowie einen kurzen, von der ki formulierten "trend"-hinweis (datengrundlage: geschätzte vs. tatsächliche dauer über zeit, siehe `memory.md` §6).
+- rein lokal berechenbar (v1), da alle zugrundeliegenden entitäten bereits lokal vorliegen.
+
+### 4.10 einstellungen
+- `UserSettings`-entität (1:1 zu `User`), clientseitig cached, änderungen synchron in domain-schicht wirksam (z. b. `weekly_goal_count` beeinflusst die weiche validierung in §4.1).
+- kategorien (siehe `context.md` §3.8 für die vollständige liste): bereiche, ziel-parameter, erinnerungszeiten, kalender & planung, diktat & ki-datenschutz (inkl. opt-out einzelner tagebuch-einträge aus dem retrieval-index, siehe `memory.md` §4), darstellung, konto & abo.
+
+### 4.11 beta-feedback
+- einfacher feedback-mechanismus, **mindestens für die beta-phase** (nutzer-feedback, mockup-iteration 2) — sichtbar als kleiner hinweis auf den kernbildschirmen und prominent in den einstellungen.
+- technische umsetzung noch offen (siehe `context.md` §7): denkbar sind (a) ein einfacher mail-versand (`mailto:`-flow, kein backend nötig, schnellster start), (b) ein schlankes formular gegen ein eigenes backend/webhook, oder (c) anbindung an ein bestehendes tool. für die beta reicht (a) oder (b) — keine vollwertige ticket-verwaltung nötig.
 
 ## 5. datenmodell (kernentitäten, skizze)
 
@@ -108,6 +126,11 @@ Habit         { id, user_id, area_id?, name, frequency, target_value? }
 HabitLog      { id, habit_id, date, value, done }
 Transcript    { id, user_id, source(manual|wispr_flow), raw_text,
                 processed_at?, linked_task_ids[], linked_note_id? }
+UserSettings  { user_id, weekly_goal_count, monthly_goal_count, week_start(mon|sun),
+                morning_reminder_time?, evening_reminder_time?,
+                calendar_auto_export, default_break_minutes,
+                journal_usable_for_ai, retain_raw_transcripts, theme }
+FeedbackReport{ id, user_id, message, context?, created_at }
 ```
 
 alle entitäten: `user_id`-scoped (außer admin-abfragen), `updated_at` für sync-konfliktauflösung.
