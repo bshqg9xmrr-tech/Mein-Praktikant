@@ -100,5 +100,6 @@ kernproblem, das die app löst: **von der absicht zur tat** — adhs-typische sc
 
 ## 8. aktueller stand
 
-- **phase 0 — planung/brainstorming** (dieses dokument + `claude.md`, `architecture.md`, `memory.md`, `ui_guidelines.md`)
-- **noch keine implementierung.** nächster schritt nach freigabe der annahmen/offenen fragen: mvp-scope fixieren (siehe `claude.md` §6) und iteration `v0.1.0` starten.
+- **iteration v0.2.0 — erster lauffähiger stand.** siehe `README.md`/`CHANGELOG.md`: ein web-prototyp (`app/`, im browser getestet) und ein Swift/SwiftUI-startpunkt (`native/`, nicht kompiliert — kein Xcode in dieser umgebung) existieren parallel.
+- offene frage §7.3 (nativ vs. cross-platform) ist damit **nicht** final beantwortet, sondern bewusst offengehalten: beide wege existieren nebeneinander, bis markus entscheidet, welcher der hauptweg wird.
+- die anderen offenen fragen in §7 sind weiterhin unbeantwortet.

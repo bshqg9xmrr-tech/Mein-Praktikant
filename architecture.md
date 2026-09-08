@@ -111,6 +111,8 @@ domain-schicht kennt keine SwiftUI- oder integrations-details → gut testbar, a
 
 ## 5. datenmodell (kernentitäten, skizze)
 
+> **umsetzungshinweis (v0.2.0)**: in der ersten lauffähigen umsetzung (`app/`, `native/`) wurde die goal-`level` `day` bewusst weggelassen — tasks übernehmen die tagesebene direkt über `goal_id` (meist auf ein wochenziel). deckt "tagesebene wirkt auf wochenziel ein" ab, ohne ein zusätzliches, praktisch leeres modell zu brauchen. siehe `app/README.md`/`native/README.md`.
+
 ```
 User          { id, auth0_sub, email, role, subscription_status, created_at }
 Area          { id, user_id, name, color, sort_order }
