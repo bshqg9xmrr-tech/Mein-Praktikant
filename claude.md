@@ -35,7 +35,7 @@ reihenfolge zum einlesen bei neuen sessions: **context → architecture → memo
 - [`app/`](./app/) — ein **web-prototyp** (HTML/CSS/JS, kein build-schritt), der schon heute im browser läuft (PC und handy) und die ziel-hierarchie mit **echter ableitung** (jahr → quartal → monat → woche, fortschritt läuft automatisch von unten nach oben zusammen) enthält — das war der teil, der im ersten mockup (iteration v0.1.x) noch fehlte.
 - [`native/`](./native/) — ein **Swift/SwiftUI-startpunkt** (SwiftData-datenmodell + dieselbe ziel-ableitungs-logik in Swift) für die eigentlich geplante native macOS/iOS-app aus `architecture.md`. **wichtig**: diese cloud-umgebung hat kein Xcode/macOS und konnte den Swift-code nicht kompilieren — vor dem weiterbauen unbedingt in Xcode gegenprüfen (siehe `native/README.md`).
 
-offene fragen aus `context.md` §7 sind weiterhin nicht final beantwortet (u. a. "claude vs. cloud"-speicherung, Wispr-Flow-api-zugang, ob langfristig nativ oder web/cross-platform der hauptweg wird) — die aktuelle umsetzung geht bewusst **beide wege parallel**, um sofort etwas nutzbares zu haben, ohne die native architektur-empfehlung aufzugeben.
+**alle offenen fragen aus `context.md` §7 sind inzwischen mit markus geklärt**: "claude vs. cloud" war "cloud" gemeint (reine datenspeicherung); nativ (swift/SwiftUI) ist der bestätigte hauptweg (kein cross-platform-ansatz); die ki-schicht wird **hybrid & kostenlos** umgesetzt (apple on-device-ki + optional Ollama auf dem mac, claude-api erst später als bezahltes pro-upgrade — siehe `architecture.md` §2.1); v1 bleibt strikt single-user; wochenstart montag (einstellbar); beta-feedback geht an ein eigenes backend statt nur mail. der web-prototyp (`app/`) bleibt als sofort nutzbarer zwischenstand bestehen, ist aber **nicht mehr der langfristige zielpfad** — das ist jetzt `native/`.
 
 ## 5. versionierung der iterationen
 
@@ -66,7 +66,8 @@ zusätzlich (über den ursprünglichen vorschlag hinaus, aus nutzer-feedback): n
 
 ## 8. nächste schritte
 
-1. `app/` in einem echten browser (nicht nur automatisiert) ausprobieren und feedback geben.
-2. `native/` in Xcode öffnen und gegenprüfen/korrigieren — dieser code wurde nicht kompiliert.
-3. offene fragen in `context.md` §7 mit markus klären (u. a. jetzt auch: bleibt der web-prototyp ein dauerhafter zweiter weg, oder ist er nur übergangslösung bis die native app steht?).
-4. danach iteration `v0.3.0` planen: welche der noch offenen bausteine (ki-anbindung, Auth0, kalender-sync, …) zuerst?
+1. `native/` in Xcode öffnen und gegenprüfen/korrigieren — dieser code wurde nicht kompiliert, ist aber jetzt der bestätigte hauptweg.
+2. **iteration `v0.3.0`**: ki-schicht nach `architecture.md` §2.1 umsetzen (`AIProvider`-protokoll, `OnDeviceAIClient` als erstes, `OllamaClient` optional danach) — betrifft `PlanDayUseCase`, `TranscriptProcessorUseCase`, `JournalReviewUseCase`, `CoachFeedbackUseCase`, ki-assistent (§4.7).
+3. feedback-backend (`architecture.md` §4.11) technisch festlegen und anbinden, statt des `mailto:`-fallbacks.
+4. `app/` bleibt als sofort nutzbarer web-prototyp bestehen (kann bei bedarf weiter mitgepflegt werden), ist aber kein zielarchitektur-pfad mehr — kein weiterer investitionsschwerpunkt.
+5. noch offene technische detailfragen (`architecture.md` §9, `context.md` §7 "noch offen"): konkrete Ollama-modellwahl, feedback-backend-technologie.

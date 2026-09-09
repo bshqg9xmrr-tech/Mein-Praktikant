@@ -2,6 +2,27 @@
 
 alle nennenswerten iterationen dieses projekts werden hier protokolliert. format angelehnt an [keep a changelog](https://keepachangelog.com/), versionierung nach [semver](https://semver.org/) (solange `0.x.y`: alles kann sich noch ändern).
 
+## [0.2.1] — 2026-09-09 — klärungsrunde: alle offenen fragen beantwortet
+
+nutzer-auftrag: alle offenen fragen aus `context.md` §7 beantwortet, plus eine neue frage ("kannst du eine kostenlose opensource ki einbauen?"). reine planungs-/dokumentations-iteration, kein neuer code.
+
+### geändert — `context.md`, `architecture.md`, `claude.md`
+- **speicherung**: "in der claude gespeichert" war "cloud" gemeint — bestätigt, keine änderung an der lokal-first-strategie nötig.
+- **plattform**: nativ (swift/SwiftUI) ist der **bestätigte hauptweg** (kein cross-platform-ansatz) — `native/` ist damit nicht mehr nur ein paralleler versuch, sondern das ziel; `app/` bleibt als sofort nutzbarer web-prototyp bestehen, ist aber kein weiterer investitionsschwerpunkt.
+- **ki-schicht neu geplant, hybrid & kostenlos** (`architecture.md` §2.1, neu): standardmäßig apple's on-device-ki (Foundation Models, mac + iphone, kostenlos & offline), optional ein stärkeres open-source-modell via Ollama (nur mac). claude-api ist **kein v1-bestandteil mehr**, sondern als späteres, bezahltes "pro"-upgrade vorgesehen — passt zur ohnehin geplanten Stripe-anbindung. neue abstraktion `AIProvider` mit austauschbaren backends (`OnDeviceAIClient`, `OllamaClient`, `ClaudeClient`).
+- **mehrnutzer**: v1 bleibt strikt single-user (markus) — mehrnutzer erst nach geplanter app-store-/online-veröffentlichung relevant, architektur bleibt vorbereitet.
+- **wochenstart**: montag als default, in den einstellungen änderbar.
+- **beta-feedback**: soll an ein eigenes backend angebunden werden (nicht nur `mailto:`) — technologie noch offen.
+- **"etwas smarter"**: bestätigt inkl. ausdrücklichem wunsch nach **proaktiven vorschlägen** (nicht nur reaktive ki-hinweise).
+- Auth0/Stripe: noch keine bestehenden accounts, werden bei bedarf neu angelegt.
+
+### noch offen (neu)
+- konkrete Ollama-modellwahl (Llama 3.1 vs. Mistral vs. Qwen2.5 o. ä.)
+- technologie für das feedback-backend
+
+### nächste iteration
+- `0.3.0` (vorschlag): ki-schicht (`AIProvider`, on-device zuerst) implementieren, feedback-backend anbinden.
+
 ## [0.2.0] — 2026-09-08 — erster lauffähiger stand (web-prototyp + native startpunkt)
 
 nutzer-auftrag: "kannst du mir das jetzt einmal umsetzen" + explizit nachgefragt: die ableitung von kurzfristigen zielen aus langfristigen zielen fehlte noch. beides ist jetzt umgesetzt, parallel auf zwei wegen (nutzer-entscheidung: "beides parallel anlegen"), da diese cloud-umgebung kein Xcode/macOS hat und die geplante native app hier nicht gebaut/getestet werden kann.

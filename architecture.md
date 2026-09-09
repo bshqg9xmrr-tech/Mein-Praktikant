@@ -21,7 +21,19 @@ begründung:
 - **App Intents/Siri, Diktierfunktion, Handoff/iCloud** stehen "kostenlos" zur verfügung.
 - ein team, eine sprache (Swift), ein datenmodell — geringere wartungslast als zwei separate stacks oder ein web-wrapper (Electron läuft nicht sinnvoll auf iPhone).
 
-alternative (verworfen, aber dokumentiert): react native/Expo für gemeinsamen code über mehr plattformen hinweg. nachteil: schwächere offline-kalender-/notification-integration, zusätzliche abstraktionsschicht. nur relevant, falls android/windows-unterstützung mittelfristig gefordert wird (aktuell nicht der fall, siehe offene frage in `context.md`).
+alternative (verworfen, aber dokumentiert): react native/Expo für gemeinsamen code über mehr plattformen hinweg. nachteil: schwächere offline-kalender-/notification-integration, zusätzliche abstraktionsschicht. nur relevant, falls android/windows-unterstützung mittelfristig gefordert wird (aktuell nicht der fall — **entschieden, siehe `context.md` §7.3**).
+
+### 2.1 ki-schicht (hybrid, kostenlos & offline-first)
+
+**entscheidung** (siehe `context.md` §7.9): markus möchte eine kostenlose, möglichst offline-fähige ki-lösung statt von anfang an auf die bezahlpflichtige claude-api zu setzen. dafür wird die ki-anbindung hinter einem gemeinsamen protokoll `AIProvider` abstrahiert (im `Integrations/`-modul), mit austauschbaren implementierungen:
+
+1. **`OnDeviceAIClient`** (default, beide plattformen) — nutzt apples **Foundation Models framework** (ab macOS 15 / iOS 18), läuft komplett lokal auf dem gerät, kostenlos, kein setup, funktioniert vollständig offline. deckt einfachere ki-aufgaben ab: kategorisierung (bereich-erkennung), grobe dauer-schätzung, einfache formulierungsvorschläge.
+2. **`OllamaClient`** (optional, nur macOS) — spricht mit einer lokal laufenden [Ollama](https://ollama.com)-instanz (z. b. Llama 3.1 8B oder Mistral 7B, konkrete modellwahl noch offen — siehe `context.md` §7 "noch offen"). deutlich leistungsfähiger als (1), weiterhin kostenlos & offline, aber nur auf dem mac praktikabel (rechenleistung). das iphone kann entweder direkt mit dem mac synchronisieren (sobald ein sync-kanal existiert, siehe §6) oder fällt automatisch auf (1) zurück.
+3. **`ClaudeClient`** (optional, späteres bezahl-upgrade) — bleibt als hochwertigste option vorgesehen für aufgaben, die (1)/(2) überfordern (z. b. sehr differenzierte diktat-strukturierung, feinfühliger abend-coach-text). wird über die ohnehin geplante Stripe-anbindung als "pro"-feature freigeschaltet — **kein v1-bestandteil**.
+
+**auswahllogik** (`AIProviderResolver`, domain-schicht): pro aufgabe wird das leistungsfähigste **verfügbare & vom nutzer erlaubte** backend gewählt (einstellbar in `UserSettings`, siehe §4.10) — standardmäßig (1), automatisch (2) falls auf dem mac konfiguriert & erreichbar, (3) nur wenn nutzer aktiv ein pro-abo hat. jede ki-gestützte ausgabe bleibt in der ui als solche gekennzeichnet ("ki-geschätzt", "ki-vorschlag") und dem nutzer wird nicht verborgen, welches backend gerade geantwortet hat (transparenz, passt zu leitprinzip §1.2).
+
+domain-use-cases (`PlanDayUseCase`, `TranscriptProcessorUseCase`, `JournalReviewUseCase`, `CoachFeedbackUseCase`, ki-assistent aus §4.7) rufen ausschließlich gegen das `AIProvider`-protokoll auf, nie gegen ein konkretes backend direkt — austausch/erweiterung um weitere modelle bleibt so ohne umbau der domain-schicht möglich.
 
 ```
 mein-praktikant/
@@ -29,7 +41,7 @@ mein-praktikant/
 ├── Features/             # feature-module (Goals, Tasks, Journal, Notes, Habits, Assistant)
 ├── Domain/                # use cases, geschäftslogik, planner-engine (plattformunabhängig)
 ├── Data/                  # local store (SwiftData/SQLite), repositories, sync-engine
-├── Integrations/          # Auth0Client, StripeClient, WisprFlowClient, ClaudeClient, CalendarBridge
+├── Integrations/          # Auth0Client, StripeClient, WisprFlowClient, AIProvider (OnDeviceAIClient, OllamaClient, ClaudeClient), CalendarBridge, FeedbackClient
 ├── DesignSystem/          # liquid-glass komponenten (siehe ui_guidelines.md)
 └── docs/                  # dieses dokumentenset
 ```
@@ -107,7 +119,7 @@ domain-schicht kennt keine SwiftUI- oder integrations-details → gut testbar, a
 
 ### 4.11 beta-feedback
 - einfacher feedback-mechanismus, **mindestens für die beta-phase** (nutzer-feedback, mockup-iteration 2) — sichtbar als kleiner hinweis auf den kernbildschirmen und prominent in den einstellungen.
-- technische umsetzung noch offen (siehe `context.md` §7): denkbar sind (a) ein einfacher mail-versand (`mailto:`-flow, kein backend nötig, schnellster start), (b) ein schlankes formular gegen ein eigenes backend/webhook, oder (c) anbindung an ein bestehendes tool. für die beta reicht (a) oder (b) — keine vollwertige ticket-verwaltung nötig.
+- **entschieden** (`context.md` §7.7): anbindung an ein **eigenes backend**, kein reiner `mailto:`-flow. `FeedbackClient` sendet `FeedbackReport` (siehe datenmodell §5) an einen schlanken eigenen endpoint (z. b. eine kleine serverless-funktion + tabelle — konkrete technologie noch offen, siehe `context.md` §7 "noch offen"). der web-prototyp (`app/`) behält vorerst den einfacheren `mailto:`-fallback, bis das backend existiert.
 
 ## 5. datenmodell (kernentitäten, skizze)
 
@@ -161,4 +173,6 @@ alle entitäten: `user_id`-scoped (außer admin-abfragen), `updated_at` für syn
 
 1. SwiftData (neuer, einfacher) vs. Core Data + SQLite direkt (mehr kontrolle, mehr boilerplate) — vorschlag: SwiftData, bei bedarf später migrierbar.
 2. Wispr-Flow-integration: webhook/push oder polling? abhängig von deren api (siehe offene frage in `context.md`).
-3. Claude-API-zugriff: direkt vom client (api-key im gerät, risiko) oder über einen schlanken eigenen backend-proxy (empfohlen, sobald mehrnutzer/abo relevant wird, u. a. für Stripe-abgleich + key-schutz)?
+3. konkrete modellwahl für `OllamaClient` (§2.1) — Llama 3.1 8B vs. Mistral 7B vs. Qwen2.5 o. ä. — braucht einen kurzen praxisvergleich (qualität vs. laufzeit auf einem mac), sobald die ki-schicht implementiert wird.
+4. technologie für das feedback-backend (§4.11) — z. b. eine kleine serverless-funktion (Cloudflare Workers/Vercel) + leichte datenbank, oder teil des späteren supabase-backends vorziehen? noch nicht entschieden.
+5. **falls später doch claude-api (pro-tier, §2.1) aktiviert wird**: zugriff direkt vom client (api-key im gerät, risiko) oder über einen schlanken eigenen backend-proxy (empfohlen, u. a. für Stripe-abgleich + key-schutz)? — nicht dringend, da v1 ohne claude-api auskommt.

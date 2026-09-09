@@ -75,31 +75,39 @@ kernproblem, das die app löst: **von der absicht zur tat** — adhs-typische sc
 | Auth0 | login/authentifizierung | v1 |
 | Stripe | zahlungen/abo | v1 (technisch vorbereitet, aktivierung ggf. später) |
 | Wispr Flow | diktat/transkription | v1 |
-| Claude (Anthropic API) | "ki des vertrauens" — verarbeitung von diktaten, ziel-planung, coach, frage-überall | v1 |
+| apple on-device-ki (Foundation Models) | ki-basis v1, kostenlos, offline, auf mac + iphone | v1 |
+| Ollama (open-source-modell) | stärkere ki, optional, nur mac, kostenlos & offline | v1 (optional) |
+| Claude (Anthropic API) | optionales, bezahltes "pro"-upgrade für anspruchsvollere ki-aufgaben | **später**, kein v1-bestandteil |
 | Supabase (oder ähnlich) | zentrale datenbank/sync | **später**, v1 startet lokal-first |
 
 ## 6. getroffene annahmen (bitte gegenprüfen)
 
-1. **"daten sollen in der claude gespeichert werden"** wird interpretiert als: *(a)* die ki-intelligenz der app basiert auf claude/Anthropic-API, und *(b)* gemeint ist vermutlich **"cloud"** statt "claude" für die reine datenspeicherung — die app ist lokal-first (offline nutzbar), synchronisiert aber optional in eine cloud-datenbank (später supabase) für backup + abgleich zwischen mac und iphone. → **bitte bestätigen oder korrigieren.**
-2. plattform-ansatz: **eine gemeinsame codebasis für macOS + iOS/iPadOS** (swift/SwiftUI), kein web-wrapper — begründung in `architecture.md` §2.
+1. ~~"daten sollen in der claude gespeichert werden"~~ — **geklärt (§7.1): gemeint war "cloud".** die app ist lokal-first (offline nutzbar), synchronisiert optional in eine cloud-datenbank (später supabase) für backup + abgleich zwischen mac und iphone. die ki-schicht ist davon unabhängig geregelt (§7.9, hybrid-ansatz).
+2. plattform-ansatz: **eine gemeinsame codebasis für macOS + iOS/iPadOS** (swift/SwiftUI), kein web-wrapper — **bestätigt (§7.3)**, begründung in `architecture.md` §2.
 3. "jede woche zwei wochenziele" / "jeder monat drei hauptziele" gelten **pro bereich oder global** — angenommen: **konfigurierbar pro bereich**, mit globaler gesamtsicht.
-4. wispr-flow-anbindung: es wird von einer **api/integration** ausgegangen (die in dieser claude-code-umgebung als MCP-tool sichtbare wispr-flow-anbindung dient als referenz, ist aber nicht automatisch identisch mit einer öffentlichen app-integration) — muss technisch verifiziert werden (siehe offene fragen).
-5. stripe wird **vorbereitet, aber nicht zwingend sofort scharf geschaltet**, da v1 zunächst single-user (markus) ist.
-6. admin/user-trennung wird von anfang an im datenmodell angelegt, auch wenn v1 nur einen aktiven nutzer hat.
+4. wispr-flow-anbindung: es wird von einer **api/integration** ausgegangen (die in dieser claude-code-umgebung als MCP-tool sichtbare wispr-flow-anbindung dient als referenz, ist aber nicht automatisch identisch mit einer öffentlichen app-integration) — muss technisch verifiziert werden.
+5. stripe wird **vorbereitet, aber nicht zwingend sofort scharf geschaltet**, da v1 zunächst single-user (markus) ist — **bestätigt (§7.4/§7.5)**.
+6. admin/user-trennung wird von anfang an im datenmodell angelegt, auch wenn v1 nur einen aktiven nutzer hat — **bestätigt (§7.5): v1 bleibt strikt single-user, mehrnutzer erst bei geplanter app-store/online-veröffentlichung relevant.**
+7. **ki-schicht ist hybrid** (§7.9): standardmäßig kostenlos & offline (apple on-device-modell auf beiden geräten, optional ein stärkeres, selbst gehostetes open-source-modell via Ollama auf dem mac), claude-api optional als späteres bezahltes "pro"-upgrade — siehe `architecture.md` §2.1.
 
-## 7. offene fragen an den nutzer
+## 7. offene fragen an den nutzer — beantwortet
 
-1. ist mit "in der claude gespeichert" tatsächlich die anthropic/claude-api als ki-schicht gemeint, oder soll es heißen "in der **cloud**" (reine datenspeicherung)? oder beides?
-2. hast du einen **Wispr-Flow-API-Zugang** (developer-api-key) oder soll die anbindung erstmal über manuellen transkript-import laufen und Wispr Flow später ergänzt werden?
-3. soll die app **wirklich nativ** (swift/SwiftUI, bestes offline- und kalender-erlebnis) sein, oder ist ein cross-platform-ansatz (z. b. react native/Expo) wegen geschwindigkeit/wartung wichtiger? — dass **beide** plattformen (mac + iphone) gebraucht werden, ist jetzt bestätigt (§4); offen ist nur noch **wie** (nativ vs. cross-platform). (empfehlung siehe `architecture.md`)
-4. gibt es schon ein Auth0-tenant / Stripe-account, oder werden diese im rahmen des projekts neu angelegt?
-5. sollen andere personen (team plenum/tecis?) je eigene accounts bekommen, oder bleibt es v1 strikt single-user mit vorbereiteter mehrnutzer-architektur?
-6. wochenstart: montag oder sonntag? (für wochenziele/kalenderansicht relevant)
-7. **beta-feedback-button** (§3.9): wohin soll das feedback gehen — direkt an eine e-mail-adresse, ein einfaches formular/backend, oder ein bestehendes tool (z. b. ein ticket-system)? beeinflusst den technischen aufwand für die beta.
-8. "und gerne etwas smarter" (nutzer-feedback, iteration 2) ist bewusst offen formuliert — im mockup (v2) wurde das als sichtbare ki-hinweise umgesetzt (banner "dein tag ist automatisch geplant", "ki-vorschlag"-badges bei pausen, "ki-geschätzt" bei dauer-schätzungen, trend-insights im übersichts-dashboard). passt diese richtung, oder schwebt dir etwas anderes vor (z. b. proaktive vorschläge, tiefere automatisierung an anderer stelle)?
+1. **"in der claude gespeichert"**: gemeint war **"cloud"** (reine datenspeicherung), nicht die claude/anthropic-api. → siehe annahme §6.1.
+2. **Wispr-Flow-API-Zugang**: kein eigener developer-api-key vorhanden → start über manuellen transkript-import, Wispr Flow-anbindung wird später ergänzt, sobald zugang besteht.
+3. **nativ vs. cross-platform**: **nativ (swift/SwiftUI)** — begründung an markus erläutert (ein Xcode-projekt für mac+iphone gemeinsam, tiefste kalender-/benachrichtigungs-integration, kein android/web geplant) und von ihm akzeptiert.
+4. **Auth0/Stripe-accounts**: noch keine vorhanden → werden im rahmen des projekts neu angelegt, sobald relevant (noch nicht für v1 nötig).
+5. **mehrnutzer**: v1 bleibt **strikt single-user** (nur markus). später (nach app-store-/online-veröffentlichung) sollen weitere nutzer eingeladen werden können — architektur bleibt dafür vorbereitet (rollenmodell, `user_id`-scoping), aber ungenutzt bis dahin.
+6. **wochenstart**: **montag** als default, **aber in den einstellungen änderbar** (`UserSettings.week_start`, bereits im datenmodell vorgesehen, siehe `architecture.md` §5).
+7. **beta-feedback-button**: soll **an ein eigenes backend angebunden** sein (nicht nur `mailto:`) — siehe `architecture.md` §4.11 (aktualisiert) für die technische umsetzung.
+8. **"etwas smarter"**: bestätigt — die im mockup gezeigte richtung (ki-hinweise/banner/badges/trend-insights) passt, **zusätzlich ausdrücklich gewünscht: proaktive vorschläge** (die app schlägt von sich aus dinge vor, statt nur auf anfrage zu reagieren — z. b. quick-win-vorschläge, wochenreview-entwürfe, siehe `architecture.md` §7).
+9. **opensource-ki statt/neben claude-api?** (neue frage, aus dem gespräch): markus wünscht eine **kostenlose ki-lösung**. entschieden: **hybrid-ansatz** — standardmäßig kostenlos & offline (apple on-device-ki auf mac + iphone, optional ein stärkeres open-source-modell via Ollama auf dem mac für aufgaben, die mehr leistung brauchen), claude-api bleibt als **optionales, späteres bezahl-upgrade** vorgesehen (passt zur ohnehin geplanten Stripe-anbindung). siehe `architecture.md` §2.1 für die technische ausgestaltung.
+
+### noch offen (neu entstanden aus diesem klärungsrunde)
+- welches konkrete open-source-modell für den Ollama-pfad (z. b. Llama 3.1 8B vs. Mistral 7B vs. Qwen2.5) — kann bei bedarf getestet/verglichen werden, sobald der ki-layer implementiert wird.
+- welches backend für den feedback-button (§7.7) — eigenes schlankes backend (z. b. kleine serverless-funktion + datenbank) ist geplant, konkrete technologie noch offen für `architecture.md`.
 
 ## 8. aktueller stand
 
 - **iteration v0.2.0 — erster lauffähiger stand.** siehe `README.md`/`CHANGELOG.md`: ein web-prototyp (`app/`, im browser getestet) und ein Swift/SwiftUI-startpunkt (`native/`, nicht kompiliert — kein Xcode in dieser umgebung) existieren parallel.
-- offene frage §7.3 (nativ vs. cross-platform) ist damit **nicht** final beantwortet, sondern bewusst offengehalten: beide wege existieren nebeneinander, bis markus entscheidet, welcher der hauptweg wird.
-- die anderen offenen fragen in §7 sind weiterhin unbeantwortet.
+- **alle offenen fragen aus §7 sind jetzt beantwortet** (klärungsrunde nach v0.2.0). nativ (swift/SwiftUI) ist damit der bestätigte hauptweg — der web-prototyp bleibt als sofort nutzbarer zwischenstand bestehen, ist aber nicht mehr der langfristige zielpfad.
+- nächste iteration (`v0.3.0`) plant u. a. die ki-schicht (hybrid, §7.9) und den feedback-backend-anschluss (§7.7) — siehe `claude.md` §8.
