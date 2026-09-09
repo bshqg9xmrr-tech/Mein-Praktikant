@@ -37,6 +37,8 @@ reihenfolge zum einlesen bei neuen sessions: **context → architecture → memo
 
 **alle offenen fragen aus `context.md` §7 sind inzwischen mit markus geklärt**: "claude vs. cloud" war "cloud" gemeint (reine datenspeicherung); nativ (swift/SwiftUI) ist der bestätigte hauptweg (kein cross-platform-ansatz); die ki-schicht wird **hybrid & kostenlos** umgesetzt (apple on-device-ki + optional Ollama auf dem mac, claude-api erst später als bezahltes pro-upgrade — siehe `architecture.md` §2.1); v1 bleibt strikt single-user; wochenstart montag (einstellbar); beta-feedback geht an ein eigenes backend statt nur mail. der web-prototyp (`app/`) bleibt als sofort nutzbarer zwischenstand bestehen, ist aber **nicht mehr der langfristige zielpfad** — das ist jetzt `native/`.
 
+**iteration v0.3.0** macht `app/` sofort auf dem handy nutzbar: als PWA installierbar (`manifest.json`/`sw.js`), über GitHub Pages hostbar (`.github/workflows/pages.yml`), und mit **optionalem, echtem cloud-sync** (Supabase, `js/cloud.js`) — die gesamte lokale datenbank wird als ein json-dokument pro angemeldeter person synchronisiert (last-write-wins), damit mac, iphone und web dieselben daten zeigen. einrichtung in `app/CLOUD_SETUP.md`. dies ist ein **vorgezogener zwischenstand** der in `architecture.md` §6 ohnehin für "v2" geplanten sync-strategie, kein ersatz für Auth0/die spätere supabase-vollintegration.
+
 ## 5. versionierung der iterationen
 
 - die app folgt **semver** (`v0.1.0`, `v0.2.0`, …) — solange kein stabiles v1 existiert, bleibt die major-version `0`.

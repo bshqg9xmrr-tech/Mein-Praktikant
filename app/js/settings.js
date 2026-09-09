@@ -4,6 +4,9 @@
 
 import { Areas, Goals, Tasks, getSettings, updateSettings, uid, resetAll, replaceAll } from "./storage.js";
 import { esc, toast, openModal, closeModal, ICONS } from "./ui.js";
+import * as cloud from "./cloud.js";
+
+let cloudListenerAttached = false;
 
 const AREA_COLOR_CHOICES = ["#f2895f", "#2fa8a0", "#8b6fe8", "#8891a8", "#5fb587", "#e0964f", "#c98bd8", "#4e9ee0"];
 
@@ -93,6 +96,54 @@ function importData(file, onDone) {
   reader.readAsText(file);
 }
 
+function cloudSyncCardHtml() {
+  const cfg = cloud.getConfig();
+  const st = cloud.getStatus();
+  const configured = cloud.isConfigured();
+
+  if (!configured) {
+    return `
+    <div class="card">
+      <div class="section-label" style="margin-bottom:10px;">cloud-sync (mac ⇄ iphone ⇄ web)</div>
+      <div style="font-size:12px; color:var(--text-soft); line-height:1.5; margin-bottom:10px;">
+        ohne cloud-sync bleiben deine daten nur auf diesem gerät. um dieselben daten auf mehreren geräten zu sehen,
+        ein kostenloses <a href="https://supabase.com" target="_blank" rel="noopener">supabase</a>-projekt anlegen
+        (siehe <code>app/CLOUD_SETUP.md</code> im repo) und hier url + anon-key eintragen.
+      </div>
+      <label class="field">supabase-projekt-url<input type="text" id="cloud-url" placeholder="https://xxxx.supabase.co" value="${esc(cfg.url)}"></label>
+      <label class="field">anon-key<input type="text" id="cloud-key" placeholder="eyJ..." value="${esc(cfg.anonKey)}"></label>
+      <button class="btn btn-primary btn-block" id="cloud-save-config" style="margin-top:8px;">speichern</button>
+    </div>`;
+  }
+
+  if (!st.email) {
+    return `
+    <div class="card">
+      <div class="section-label" style="margin-bottom:10px;">cloud-sync (mac ⇄ iphone ⇄ web)</div>
+      <div style="font-size:12px; color:var(--text-soft); line-height:1.5; margin-bottom:10px;">
+        eingerichtet, aber noch nicht angemeldet. e-mail eintragen und den login-link öffnen, der dir zugeschickt wird —
+        auf jedem gerät mit derselben e-mail-adresse, dann sehen alle geräte dieselben daten.
+      </div>
+      <label class="field">e-mail<input type="email" id="cloud-email" placeholder="du@beispiel.de"></label>
+      <button class="btn btn-primary btn-block" id="cloud-send-link" style="margin-top:8px;">login-link senden</button>
+      <button class="btn-ghost" id="cloud-forget-config" style="margin-top:8px;">projekt-daten entfernen</button>
+    </div>`;
+  }
+
+  const lastSync = st.lastSyncAt ? new Date(st.lastSyncAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : "noch nie";
+  return `
+    <div class="card">
+      <div class="section-label" style="margin-bottom:10px;">cloud-sync (mac ⇄ iphone ⇄ web)</div>
+      <div class="settings-row"><span class="label">angemeldet als</span><span style="font-weight:700;">${esc(st.email)}</span></div>
+      <div class="settings-row"><span class="label">${st.syncing ? "synchronisiert…" : "zuletzt synchronisiert"}</span><span>${st.syncing ? "" : lastSync}</span></div>
+      ${st.lastError ? `<div style="font-size:11.5px; color:var(--danger-text); margin-top:4px;">fehler: ${esc(st.lastError)}</div>` : ""}
+      <div style="display:flex; gap:8px; margin-top:10px;">
+        <button class="btn btn-secondary btn-block" id="cloud-sync-now">jetzt synchronisieren</button>
+        <button class="btn-ghost" id="cloud-sign-out">abmelden</button>
+      </div>
+    </div>`;
+}
+
 export function render() {
   const el = document.getElementById("view-settings");
   const s = getSettings();
@@ -145,6 +196,8 @@ export function render() {
         Wispr Flow, automatische ziel-/aufgaben-vorschläge und der ki-coach im tagebuch sind noch nicht angebunden — offene punkte dazu stehen in <code>context.md</code> §7 im repo.
       </div>
     </div>
+
+    ${cloudSyncCardHtml()}
 
     <div class="card">
       <div class="section-label" style="margin-bottom:10px;">daten</div>
@@ -207,4 +260,63 @@ export function render() {
       render();
     }
   });
+
+  const saveConfigBtn = el.querySelector("#cloud-save-config");
+  if (saveConfigBtn) {
+    saveConfigBtn.addEventListener("click", () => {
+      const url = el.querySelector("#cloud-url").value.trim();
+      const key = el.querySelector("#cloud-key").value.trim();
+      if (!url || !key) return toast("bitte url und anon-key eintragen.");
+      cloud.setConfig(url, key);
+      cloud.start();
+      toast("gespeichert.");
+      render();
+    });
+  }
+  const forgetBtn = el.querySelector("#cloud-forget-config");
+  if (forgetBtn) {
+    forgetBtn.addEventListener("click", () => {
+      cloud.clearConfig();
+      render();
+    });
+  }
+  const sendLinkBtn = el.querySelector("#cloud-send-link");
+  if (sendLinkBtn) {
+    sendLinkBtn.addEventListener("click", async () => {
+      const email = el.querySelector("#cloud-email").value.trim();
+      if (!email) return toast("bitte e-mail-adresse eintragen.");
+      try {
+        await cloud.requestMagicLink(email);
+        toast(`login-link an ${email} geschickt — dort öffnen.`);
+      } catch (e) {
+        toast(`fehler: ${e.message}`);
+      }
+    });
+  }
+  const syncNowBtn = el.querySelector("#cloud-sync-now");
+  if (syncNowBtn) {
+    syncNowBtn.addEventListener("click", async () => {
+      try {
+        await cloud.syncNow();
+        toast("synchronisiert.");
+        render();
+      } catch (e) {
+        toast(`fehler: ${e.message}`);
+      }
+    });
+  }
+  const signOutBtn = el.querySelector("#cloud-sign-out");
+  if (signOutBtn) {
+    signOutBtn.addEventListener("click", async () => {
+      await cloud.signOut();
+      render();
+    });
+  }
+
+  if (!cloudListenerAttached) {
+    cloudListenerAttached = true;
+    cloud.onStatusChange(() => {
+      if (!document.getElementById("view-settings").classList.contains("hidden")) render();
+    });
+  }
 }

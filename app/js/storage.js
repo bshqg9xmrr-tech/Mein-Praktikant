@@ -91,6 +91,21 @@ function seedData() {
 }
 
 let db = null;
+const saveListeners = [];
+const changeListeners = [];
+
+// wird von cloud.js aufgerufen, um über jede lokale änderung informiert zu
+// werden (für den debounced cloud-sync-push) — storage.js selbst weiß nichts
+// von supabase, bleibt so unabhängig nutzbar (offline-first, siehe claude.md §3.1).
+export function onSave(cb) {
+  saveListeners.push(cb);
+}
+
+// wird aufgerufen, wenn sich die view neu rendern soll, weil daten von
+// "außen" kamen (z. b. ein cloud-pull hat replaceAll() aufgerufen).
+export function onExternalChange(cb) {
+  changeListeners.push(cb);
+}
 
 export function load() {
   if (db) return db;
@@ -116,6 +131,7 @@ export function load() {
 
 export function save() {
   localStorage.setItem(DB_KEY, JSON.stringify(db));
+  saveListeners.forEach((cb) => cb(db));
 }
 
 export function resetAll() {
@@ -124,9 +140,11 @@ export function resetAll() {
   return db;
 }
 
-export function replaceAll(newDb) {
+export function replaceAll(newDb, { silent = false } = {}) {
   db = newDb;
-  save();
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
+  if (!silent) saveListeners.forEach((cb) => cb(db));
+  changeListeners.forEach((cb) => cb(db));
   return db;
 }
 

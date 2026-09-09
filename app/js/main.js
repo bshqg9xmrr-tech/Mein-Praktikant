@@ -1,6 +1,7 @@
 // main.js — bootstrap + einfaches view-routing.
 
-import { load } from "./storage.js";
+import { load, onExternalChange } from "./storage.js";
+import * as cloud from "./cloud.js";
 import * as today from "./today.js";
 import * as goals from "./goals-view.js";
 import * as notes from "./notes.js";
@@ -11,8 +12,10 @@ import * as settings from "./settings.js";
 
 const views = { today, goals, notes, journal, habits, overview, settings };
 const VIEW_STORAGE_KEY = "mein-praktikant-last-view";
+let currentView = "today";
 
 function showView(name) {
+  currentView = name;
   Object.keys(views).forEach((v) => {
     document.getElementById(`view-${v}`).classList.toggle("hidden", v !== name);
   });
@@ -36,6 +39,10 @@ function init() {
 
   document.getElementById("feedback-shortcut").addEventListener("click", () => showView("settings"));
 
+  // wenn ein cloud-sync-pull daten von einem anderen gerät nachzieht,
+  // die gerade sichtbare ansicht neu zeichnen.
+  onExternalChange(() => views[currentView].render());
+
   let start = "today";
   try {
     const remembered = sessionStorage.getItem(VIEW_STORAGE_KEY);
@@ -44,6 +51,8 @@ function init() {
     /* ignorieren */
   }
   showView(start);
+
+  cloud.start().catch((e) => console.warn("cloud-sync-start fehlgeschlagen", e));
 }
 
 document.addEventListener("DOMContentLoaded", init);

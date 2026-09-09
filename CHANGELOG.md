@@ -2,6 +2,24 @@
 
 alle nennenswerten iterationen dieses projekts werden hier protokolliert. format angelehnt an [keep a changelog](https://keepachangelog.com/), versionierung nach [semver](https://semver.org/) (solange `0.x.y`: alles kann sich noch ändern).
 
+## [0.3.0] — 2026-09-09 — installierbare web-app mit optionalem cloud-sync
+
+nutzer-auftrag: "wie komme ich jetzt zu einer funktionierenden app, die ich auf meinem handy testen kann, die daten... gespeichert werden und ich sowohl auf meinem handy als auch auf meinem mac oder als webversion darauf zugreifen kann?"
+
+### hinzugefügt — `app/`
+- **PWA**: `manifest.json`, `sw.js` (network-first mit offline-cache-fallback), eigene app-icons (`icons/`), meta-tags in `index.html` — auf dem iphone über "zum home-bildschirm hinzufügen" installierbar, danach auch offline nutzbar.
+- **GitHub-Pages-deployment** (`.github/workflows/pages.yml`): `app/` wird bei jedem push automatisch als statische seite veröffentlicht, damit eine echte, vom handy erreichbare url existiert (einmalig **Settings → Pages → Source: GitHub Actions** aktivieren).
+- **optionaler, echter cloud-sync** (`js/cloud.js`, neu): anbindung an ein kostenloses Supabase-projekt (magic-link-login, ein json-dokument pro person in `app_state`, last-write-wins über `updated_at`). ohne einrichtung läuft die app unverändert lokal-only weiter (`storage.js` bekam dafür `onSave()`/`onExternalChange()`-hooks, kennt supabase selbst aber nicht — offline-first bleibt der default). einrichtung + SQL-schema in neuem `app/CLOUD_SETUP.md`.
+- neue "cloud-sync"-karte in den einstellungen (projekt-url/anon-key eintragen, login-link anfordern, sync-status, "jetzt synchronisieren", abmelden).
+
+### geändert
+- `README.md` (repo + `app/`) und `claude.md` §4 auf den neuen stand gebracht.
+
+### bewusst nicht enthalten
+- kein feld-genaues merge bei gleichzeitigen offline-änderungen auf zwei geräten (ganzer datensatz, last-write-wins) — dokumentiertes, akzeptiertes verhalten für einen einzelnen nutzer, der jeweils an einem gerät arbeitet.
+- der magic-link-login ist ein zwischenstand für den sync, kein Auth0-ersatz (siehe `architecture.md` §4.8).
+- `native/` unverändert (weiterhin nicht kompiliert/getestet).
+
 ## [0.2.1] — 2026-09-09 — klärungsrunde: alle offenen fragen beantwortet
 
 nutzer-auftrag: alle offenen fragen aus `context.md` §7 beantwortet, plus eine neue frage ("kannst du eine kostenlose opensource ki einbauen?"). reine planungs-/dokumentations-iteration, kein neuer code.

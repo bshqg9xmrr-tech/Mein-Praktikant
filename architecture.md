@@ -154,6 +154,7 @@ alle entitäten: `user_id`-scoped (außer admin-abfragen), `updated_at` für syn
 - **v1 (jetzt)**: rein lokal, SwiftData/SQLite pro gerät, iCloud-Key-Value/CloudKit **optional** als einfachster erster sync-schritt zwischen eigenem mac + iphone (keine eigene backend-infrastruktur nötig).
 - **v2 (später, nach freigabe)**: supabase (Postgres) als zentrale quelle, sync-engine mit lokaler änderungs-queue + `updated_at`-basiertem last-write-wins, konfliktfälle im journal (freitext) werden nutzer zur entscheidung vorgelegt statt automatisch gemergt.
 - migration lokal→cloud ist von anfang an im datenmodell vorgesehen (stabile UUIDs, keine autoincrement-ids), damit v2 kein rewrite braucht.
+- **vorgezogen in `app/` (v0.3.0)**: eine vereinfachte version der v2-strategie läuft bereits im web-prototyp — ein supabase-projekt (nutzer selbst eingerichtet) speichert die gesamte lokale datenbank als **ein** json-dokument pro person, last-write-wins über `updated_at` (kein feld-genaues merging). siehe `app/js/cloud.js` und `app/CLOUD_SETUP.md`. dient als sofort nutzbarer zwischenstand, nicht als endgültige v2-architektur (die bekommt echtes per-entität-syncing + konfliktauflösung im journal).
 
 ## 7. weitere alltags-effizienz-funktionen (vorschläge, zur auswahl)
 
