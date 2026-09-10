@@ -14,10 +14,51 @@ function areasById() {
   return Object.fromEntries(Areas.all().map((a) => [a.id, a]));
 }
 
+// aufgaben, die gerade per "rückgängig"-toast gelöscht werden — sie bleiben
+// bis zum ablauf der frist (oder bis der toast geschlossen wird) technisch
+// noch in Tasks, werden aber hier schon aus der anzeige ausgeblendet, damit
+// sie nicht mitten im wartefenster wieder auftauchen (siehe removeTaskWithUndo).
+const pendingDeleteIds = new Set();
+
 function todaysTasks() {
   return Tasks.all()
-    .filter((t) => t.date === todayISO())
+    .filter((t) => t.date === todayISO() && !pendingDeleteIds.has(t.id))
     .sort((a, b) => (a.scheduledTime || "99:99").localeCompare(b.scheduledTime || "99:99"));
+}
+
+function addTask(title) {
+  return Tasks.add({
+    id: uid("task"),
+    title,
+    date: todayISO(),
+    areaId: null,
+    goalId: null,
+    scheduledTime: null,
+    estimatedMinutes: null,
+    done: false,
+    createdAt: todayISO(),
+  });
+}
+
+// löscht eine aufgabe nicht sofort endgültig, sondern zeigt zuerst einen
+// toast mit "rückgängig" — erst wenn die frist abläuft oder der toast
+// geschlossen wird, verschwindet die aufgabe wirklich aus Tasks.
+function removeTaskWithUndo(task) {
+  pendingDeleteIds.add(task.id);
+  render();
+  toast(`"${task.title}" gelöscht.`, {
+    actionLabel: "rückgängig",
+    onAction: () => {
+      pendingDeleteIds.delete(task.id);
+      render();
+    },
+    onDismiss: () => {
+      pendingDeleteIds.delete(task.id);
+      Tasks.remove(task.id);
+      render();
+    },
+    duration: 5000,
+  });
 }
 
 function planDay() {
@@ -111,6 +152,15 @@ export function render() {
       <button class="btn-ghost" id="replan-btn">neu planen</button>
     </div>` : ""}
 
+    ${tasks.length > 0 && openCount === 0 ? `
+    <div class="done-banner">
+      <div class="icon">${ICONS.check}</div>
+      <div class="body">
+        <div class="title">heute erledigt — gut gemacht</div>
+        <div class="meta">alle ${tasks.length} aufgabe${tasks.length === 1 ? "" : "n"} von heute abgehakt.</div>
+      </div>
+    </div>` : ""}
+
     <div class="list" id="task-list">
       ${tasks.length ? tasks.map(taskRowHtml).join("") : `<div class="empty-hint">noch nichts erfasst — einfach oben eintragen.</div>`}
     </div>
@@ -125,6 +175,19 @@ export function render() {
   el.querySelector("#capture-add").addEventListener("click", addFromInput);
   el.querySelector("#capture-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") addFromInput();
+  });
+  // wird mehrzeiliger text eingefügt (z. b. eine kopierte liste), wird jede
+  // nicht-leere zeile als eigenes todo angelegt, statt alles als einen
+  // einzigen, langen titel in das einzeilige feld zu quetschen.
+  el.querySelector("#capture-input").addEventListener("paste", (e) => {
+    const text = (e.clipboardData || window.clipboardData)?.getData("text") || "";
+    const lines = text.split(/\r\n|\r|\n/).map((l) => l.trim()).filter(Boolean);
+    if (lines.length > 1) {
+      e.preventDefault();
+      lines.forEach(addTask);
+      render();
+      toast(`${lines.length} aufgaben aus der zwischenablage angelegt.`);
+    }
   });
   el.querySelector("#capture-mic").addEventListener("click", () => {
     toast("diktierfunktion folgt mit der ki-anbindung (siehe context.md §7).");
@@ -141,8 +204,8 @@ export function render() {
       render();
     });
     row.querySelector('[data-action="delete"]').addEventListener("click", () => {
-      Tasks.remove(id);
-      render();
+      const t = Tasks.get(id);
+      if (t) removeTaskWithUndo(t);
     });
     row.querySelector('[data-action="area"]').addEventListener("change", (e) => {
       Tasks.update(id, { areaId: e.target.value || null });
@@ -157,17 +220,7 @@ export function render() {
     const input = el.querySelector("#capture-input");
     const title = input.value.trim();
     if (!title) return;
-    Tasks.add({
-      id: uid("task"),
-      title,
-      date: todayISO(),
-      areaId: null,
-      goalId: null,
-      scheduledTime: null,
-      estimatedMinutes: null,
-      done: false,
-      createdAt: todayISO(),
-    });
+    addTask(title);
     input.value = "";
     render();
   }

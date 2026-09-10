@@ -7,11 +7,59 @@ export function esc(str) {
 }
 
 let toastTimer = null;
-export function toast(message) {
+// wenn ein toast eine "rückgängig"-aktion anbietet, muss die eigentliche,
+// endgültige aktion (z. b. Tasks.remove) erst passieren, wenn die frist
+// abläuft oder der toast geschlossen wird — pendingCommit hält diese
+// noch-nicht-endgültige aktion, solange der toast sichtbar ist.
+let pendingCommit = null;
+
+// toast(message) für einfache hinweise (wie bisher), oder
+// toast(message, { actionLabel, onAction, onDismiss, duration }) für einen
+// toast mit optionalem aktions-button (z. b. "rückgängig") und schließen-x.
+// onDismiss feuert, wenn der toast ohne klick auf die aktion verschwindet
+// (frist abgelaufen oder über das x geschlossen) — dort gehört die
+// eigentliche, endgültige aktion hin (siehe today.js#removeTaskWithUndo).
+export function toast(message, { actionLabel, onAction, onDismiss, duration = 2600 } = {}) {
   const root = document.getElementById("toast-root");
-  root.innerHTML = `<div class="toast">${esc(message)}</div>`;
+
+  // ein vorheriger toast mit eigener, noch offener commit-aktion wird beim
+  // anzeigen eines neuen toasts sofort endgültig gemacht statt verworfen.
+  if (pendingCommit) {
+    const prev = pendingCommit;
+    pendingCommit = null;
+    prev();
+  }
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (root.innerHTML = ""), 2600);
+
+  root.innerHTML = `
+    <div class="toast">
+      <span class="toast-msg">${esc(message)}</span>
+      ${actionLabel ? `<button type="button" class="toast-action">${esc(actionLabel)}</button>` : ""}
+      ${onDismiss ? `<button type="button" class="toast-close" title="schließen">&times;</button>` : ""}
+    </div>`;
+
+  const commit = () => {
+    pendingCommit = null;
+    root.innerHTML = "";
+    onDismiss?.();
+  };
+
+  if (onDismiss) {
+    pendingCommit = commit;
+    toastTimer = setTimeout(commit, duration);
+    root.querySelector(".toast-close").addEventListener("click", commit);
+  } else {
+    toastTimer = setTimeout(() => (root.innerHTML = ""), duration);
+  }
+
+  if (actionLabel && onAction) {
+    root.querySelector(".toast-action").addEventListener("click", () => {
+      pendingCommit = null;
+      clearTimeout(toastTimer);
+      root.innerHTML = "";
+      onAction();
+    });
+  }
 }
 
 export function openModal(innerHtml, { onMount } = {}) {
