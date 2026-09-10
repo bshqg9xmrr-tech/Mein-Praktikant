@@ -310,7 +310,11 @@ label.field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; 
 .toast-action:hover { background: rgba(255,255,255,0.3); }
 .toast-close {
   background: transparent; color: rgba(255,255,255,0.6); border: none; cursor: pointer;
-  font-size: 17px; line-height: 1; padding: 2px 3px; flex-shrink: 0;
+  font-size: 16px; line-height: 1; flex-shrink: 0;
+  width: 26px; height: 26px; margin: -3px -2px -3px 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  /* mind. 24x24px tap-ziel (WCAG 2.5.8 / adhs-prinzip "keine feinmotorik-fallen",
+     siehe ui_guidelines.md §1.4) statt der reinen glyphen-größe */
 }
 .toast-close:hover { color: #fff; }
 
@@ -344,4 +348,8 @@ label.field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; 
   .topbar { position: fixed; top: 0; left: var(--nav-w); right: 0; z-index: 21; }
   main { max-width: 1000px; padding: 90px 40px 60px calc(var(--nav-w) + 40px); margin: 0; }
   .stat-grid { grid-template-columns: repeat(4, 1fr); }
+  /* auf dem desktop gibt es keine bottom-tabbar mehr, die der toast (bottom: 96px)
+     umgehen müsste — dort ragt er sonst bei kurzen listen in die letzte aufgabenzeile
+     (siehe tester-adhs-befund). tiefer setzen, da unten nichts mehr im weg ist. */
+  .toast { bottom: 28px; }
 }
