@@ -22,7 +22,7 @@ oder mit node: `npx serve .`
 
 ## was schon echt funktioniert
 
-- **todos**: einfache erfassung (nur titel) → separate, einfache lokale planung (reihenfolge/dauer/pausen — deterministisch, **keine echte ki**, siehe unten) → export als echte `.ics`-kalenderdatei
+- **todos**: einfache erfassung (nur titel, auch mehrzeilig per paste — jede zeile wird ein eigenes todo) → separate, einfache lokale planung (reihenfolge/dauer/pausen — deterministisch, **keine echte ki**, siehe unten) → export als echte `.ics`-kalenderdatei. löschen zeigt zuerst einen "rückgängig"-toast, bevor die aufgabe wirklich verschwindet; sind alle aufgaben des tages erledigt, erscheint eine kurze bestätigung.
 - **ziel-hierarchie mit echter ableitung** (der teil, der im ersten mockup fehlte): jahres-, quartals-, monats- und wochenziele lassen sich anlegen und an ein übergeordnetes ziel hängen. der fortschritt eines ziels berechnet sich automatisch aus seinen unterzielen (bzw. bei wochenzielen aus den verlinkten, erledigten todos) — `app/js/goals.js#effectiveProgress()`
 - **tagebuch**: strukturierte felder, automatisch übernommene erledigte todos des tages, ein regelbasierter "rückblick" (keine ki)
 - **habits**: tägliches abhaken, echte streak-berechnung

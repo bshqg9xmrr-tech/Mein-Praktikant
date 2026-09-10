@@ -2,6 +2,18 @@
 
 alle nennenswerten iterationen dieses projekts werden hier protokolliert. format angelehnt an [keep a changelog](https://keepachangelog.com/), versionierung nach [semver](https://semver.org/) (solange `0.x.y`: alles kann sich noch ändern).
 
+## [unveröffentlicht] — 2026-09-10 — heute-ansicht: weniger reibung bei erfassen & löschen
+
+nutzer-auftrag (über einen feedbackgeber-agenten geprüft und priorisiert): drei kleine reibungspunkte in der heute-ansicht (`app/js/today.js`) beheben.
+
+### hinzugefügt — `app/`
+- **rückgängig-toast beim löschen einer aufgabe**: der löschen-button entfernt eine aufgabe nicht mehr sofort endgültig, sondern blendet sie aus und zeigt einen toast mit "rückgängig"-button. erst wenn die 5-sekunden-frist abläuft oder der toast über das neue schließen-x geschlossen wird, verschwindet die aufgabe wirklich (`today.js#removeTaskWithUndo`). dafür kann `toast()` (`js/ui.js`) jetzt optional einen aktions-button und eine `onDismiss`-callback für die "jetzt endgültig"-aktion annehmen, bleibt aber für einfache text-toasts (weiterhin an allen anderen stellen im code genutzt) unverändert abwärtskompatibel.
+- **mehrzeiliges einfügen im capture-feld**: wird text mit mehreren zeilen ins einzeilige eingabefeld eingefügt (z. b. eine kopierte liste), legt `today.js` für jede nicht-leere zeile ein eigenes todo an, statt den gesamten text als einen einzigen titel zu übernehmen.
+- **"heute alles erledigt"-bestätigung**: sind aufgaben erfasst und alle als erledigt markiert (aber die liste nicht leer), erscheint eine kurze, warme bestätigung ("heute erledigt — gut gemacht") statt nur des leeren-zustand-hinweises — neuer `.done-banner`-stil in `styles.css`, passend zur bestehenden ki-banner-optik.
+
+### getestet
+- lokal per `python3 -m http.server` + playwright/chromium: aufgabe löschen → rückgängig-klick stellt sie wieder her; aufgabe löschen → frist ablaufen lassen entfernt sie endgültig (bleibt nach reload weg); schließen-x committet sofort; mehrzeiliger paste legt mehrere todos an; alle todos abhaken zeigt die bestätigung. keine konsolenfehler.
+
 ## [0.3.0] — 2026-09-09 — installierbare web-app mit optionalem cloud-sync
 
 nutzer-auftrag: "wie komme ich jetzt zu einer funktionierenden app, die ich auf meinem handy testen kann, die daten... gespeichert werden und ich sowohl auf meinem handy als auch auf meinem mac oder als webversion darauf zugreifen kann?"
