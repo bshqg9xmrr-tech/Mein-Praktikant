@@ -23,7 +23,7 @@ oder mit node: `npx serve .`
 ## was schon echt funktioniert
 
 - **todos**: einfache erfassung (nur titel, auch mehrzeilig per paste — jede zeile wird ein eigenes todo) → separate, einfache lokale planung (reihenfolge/dauer/pausen — deterministisch, **keine echte ki**, siehe unten) → export als echte `.ics`-kalenderdatei. löschen zeigt zuerst einen "rückgängig"-toast, bevor die aufgabe wirklich verschwindet; sind alle aufgaben des tages erledigt, erscheint eine kurze bestätigung.
-- **ziel-hierarchie mit echter ableitung** (der teil, der im ersten mockup fehlte): jahres-, quartals-, monats- und wochenziele lassen sich anlegen und an ein übergeordnetes ziel hängen. der fortschritt eines ziels berechnet sich automatisch aus seinen unterzielen (bzw. bei wochenzielen aus den verlinkten, erledigten todos) — `app/js/goals.js#effectiveProgress()`
+- **ziel-hierarchie mit echter ableitung** (der teil, der im ersten mockup fehlte): jahres-, quartals-, monats- und wochenziele lassen sich anlegen und an ein übergeordnetes ziel hängen. der fortschritt eines ziels berechnet sich automatisch aus seinen unterzielen, plus (neu) aus eigenen direkt verlinkten todos (erledigt-quote) und habits (konsistenz im zeitraum des ziels), gewichtet 1:1 — `app/js/goals.js#effectiveProgress()`. ein habit lässt sich (noch ohne eigene UI dafür, siehe unten) über `habit.goalId` mit einem ziel verknüpfen, analog zu `task.goalId`.
 - **tagebuch**: strukturierte felder, automatisch übernommene erledigte todos des tages, ein regelbasierter "rückblick" (keine ki)
 - **habits**: tägliches abhaken, echte streak-berechnung
 - **übersicht**: alle zahlen sind echte, aus den lokalen daten berechnete werte
@@ -40,6 +40,8 @@ diese version ersetzt keine ki — alle stellen, an denen später eine ki (siehe
 - kein ki-coach im tagebuch, nur eine regelbasierte zusammenfassung
 - kein Auth0-login (der optionale cloud-sync-login über supabase-magic-link ist ein zwischenstand, kein Auth0-ersatz), kein Stripe
 - "frage überall" (der globale ki-assistent) ist noch nicht enthalten
+- kein ki-vorschlags-flow für monats-/wochenziele (`architecture.md` §4.1 "ki entwirft ebenen unter dem jahresziel") — `Goal.origin` ist im datenmodell vorbereitet, aber bisher legt markus jedes ziel selbst an (`origin` steht immer auf `"user_defined"`)
+- **keine UI, um ein habit mit einem ziel zu verknüpfen** — `habit.goalId` existiert im datenmodell und fließt bereits in `effectiveProgress()` ein, aber die verknüpfung lässt sich aktuell nur direkt in den daten setzen, nicht über die oberfläche (kommt in einer folge-iteration)
 
 ## vereinfachung ggü. architecture.md
 

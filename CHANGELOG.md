@@ -2,6 +2,28 @@
 
 alle nennenswerten iterationen dieses projekts werden hier protokolliert. format angelehnt an [keep a changelog](https://keepachangelog.com/), versionierung nach [semver](https://semver.org/) (solange `0.x.y`: alles kann sich noch ändern).
 
+## [unveröffentlicht] — 2026-09-13 — datenmodell: habits zählen jetzt auf ziele ein
+
+nutzer-auftrag: erster umsetzungsschritt der klärungsrunde (siehe eintrag unten) — teil 1 von mehreren, **nur** datenmodell + fortschritts-berechnung, bewusst noch keine UI-änderung (`architecture.md` §2.2/§4.1/§4.6, `context.md` §3.1/§3.5/§7.10).
+
+### geändert — `app/js/storage.js`
+- `Habit` bekommt ein neues, optionales feld `goalId` (analog zu `Task.goalId`) — verknüpft ein habit optional mit einem ziel.
+- `Goal` bekommt ein neues feld `origin` (`"user_defined"` | `"ai_proposed"` | `"user_confirmed"`) — bisher legt markus jedes ziel selbst an, alle bestehenden/neuen ziele bekommen `"user_defined"` (der ki-vorschlags-flow selbst ist noch nicht angebunden).
+- `load()` ergänzt fehlende felder auf bereits gespeicherten alt-daten defensiv (`habit.goalId ??= null`, `goal.origin ??= "user_defined"`), analog zum bestehenden muster für fehlende collections.
+- seed-daten: `habit_sport` ist jetzt testweise mit dem beispielziel `goal_week_privat` verknüpft, um die neue verbindung mit echten daten testen zu können.
+
+### geändert — `app/js/goals.js`
+- `effectiveProgress()` berücksichtigt jetzt zusätzlich zu direkt verlinkten tasks auch direkt verlinkte habits: deren konsistenz im zeitraum des ziels (anteil der bereits **vergangenen** tage des zeitraums mit einem erledigten `HabitLog`-eintrag — bewusst nicht gegen die volle zeitraum-länge gemessen, sonst stünde ein habit am 1. tag eines monats automatisch bei 0%). hat ein ziel sowohl tasks als auch habits verlinkt, ergibt sich der fortschritt aus einem gewichteten mittel (default 1:1, `TASK_HABIT_WEIGHT`). hat ein ziel unterziele, fließen dessen eigene direkt verlinkten tasks/habits zusätzlich zum unterziel-durchschnitt ein (nicht anstelle davon, ebenfalls 1:1 gewichtet, `SUBGOALS_OWN_WEIGHT`). ohne unterziele und ohne verlinkte tasks/habits bleibt `manualProgress` wie bisher die grundlage.
+- `isDerived()`, `deleteGoalCascade()` (hängt jetzt auch verlinkte habits sauber aus, nicht nur tasks) und `createGoal()` (setzt `origin: "user_defined"`) entsprechend nachgezogen.
+
+### getestet
+- temporäres node-script (scratchpad, nicht committet) mit einer in-memory-`localStorage`-simulation: bestätigt task+habit-gewichtung, habit-konsistenz-berechnung über woche/monat/quartal, unterziel+eigene-verknüpfung-kombination, rückwärtskompatible defaults für alt-daten (fehlende `goalId`/`origin`) und dass `deleteGoalCascade` habit-verknüpfungen sauber löst.
+- regressionscheck: bestehende, rein unterziel-basierte ketten (jahr→quartal→monat→woche im bereich "tecis") liefern unverändert dieselben werte wie vor der änderung.
+- browser-test (playwright, `python3 -m http.server`): ziele- und habits-ansicht rendern weiterhin fehlerfrei (keine konsolenfehler), fortschrittsbalken der tecis-kette zeigen unverändert 60/60/60/100/20%.
+
+### nächste iteration
+- UI für die habit-ziel-verknüpfung (auswahlfeld analog zum bestehenden wochenziel-dropdown bei tasks), sichtbarkeit von `Goal.origin`/ki-vorschlags-badges — beides bewusst noch nicht teil dieses schritts.
+
 ## [unveröffentlicht] — 2026-09-13 — klärungsrunde: app-flow grundlegend neu gedacht
 
 nutzer-auftrag: "mir gefällt die architektur/grundstruktur und der workflow noch nicht — denk das nochmal mutig neu", gefolgt von einer visualisierung (mockup) und zwei brainstorming-runden zur konkretisierung. reine planungs-iteration, kein neuer code — `architecture.md`/`context.md` sind aktualisiert, umsetzung folgt als nächster schritt.
