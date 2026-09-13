@@ -44,13 +44,15 @@ function seedData() {
   // die kette jahr -> quartal -> monat -> woche zeigt echte ableitung:
   // jede ebene übernimmt automatisch den durchschnitt ihrer unterziele
   // (siehe js/goals.js#effectiveProgress) — nur die untersten, "blatt"-
-  // ziele (bzw. deren verlinkte tasks) tragen manuell gesetzte werte.
-  const gYear = { id: "goal_year_tecis", areaId: "area_tecis", level: "year", period: { year }, parentId: null, title: "neukunden-portfolio tecis ausbauen", manualProgress: 0, createdAt: now };
-  const gQuarter = { id: "goal_quarter_tecis", areaId: "area_tecis", level: "quarter", period: { year, quarter }, parentId: gYear.id, title: "pipeline auf 12 aktive leads bringen", manualProgress: 0, createdAt: now };
-  const gMonth = { id: "goal_month_tecis", areaId: "area_tecis", level: "month", period: { year, month }, parentId: gQuarter.id, title: "akquise-workshop halten", manualProgress: 0, createdAt: now };
-  const gWeekPitch = { id: "goal_week_pitch", areaId: "area_tecis", level: "week", period: { year, week }, parentId: gMonth.id, title: "tecis-pitch fertig vorbereiten", manualProgress: 100, createdAt: now };
-  const gWeekCalls = { id: "goal_week_calls", areaId: "area_tecis", level: "week", period: { year, week }, parentId: gMonth.id, title: "akquise-telefonate führen", manualProgress: 20, createdAt: now };
-  const gWeek2 = { id: "goal_week_privat", areaId: "area_privat", level: "week", period: { year, week }, parentId: null, title: "3x sport diese woche schaffen", manualProgress: 60, createdAt: now };
+  // ziele (bzw. deren verlinkte tasks/habits) tragen manuell gesetzte werte.
+  // origin: "user_defined" — alle seed-ziele sind von markus selbst angelegt,
+  // nicht ki-vorgeschlagen (siehe architecture.md §2.2/§4.1).
+  const gYear = { id: "goal_year_tecis", areaId: "area_tecis", level: "year", period: { year }, parentId: null, title: "neukunden-portfolio tecis ausbauen", manualProgress: 0, origin: "user_defined", createdAt: now };
+  const gQuarter = { id: "goal_quarter_tecis", areaId: "area_tecis", level: "quarter", period: { year, quarter }, parentId: gYear.id, title: "pipeline auf 12 aktive leads bringen", manualProgress: 0, origin: "user_defined", createdAt: now };
+  const gMonth = { id: "goal_month_tecis", areaId: "area_tecis", level: "month", period: { year, month }, parentId: gQuarter.id, title: "akquise-workshop halten", manualProgress: 0, origin: "user_defined", createdAt: now };
+  const gWeekPitch = { id: "goal_week_pitch", areaId: "area_tecis", level: "week", period: { year, week }, parentId: gMonth.id, title: "tecis-pitch fertig vorbereiten", manualProgress: 100, origin: "user_defined", createdAt: now };
+  const gWeekCalls = { id: "goal_week_calls", areaId: "area_tecis", level: "week", period: { year, week }, parentId: gMonth.id, title: "akquise-telefonate führen", manualProgress: 20, origin: "user_defined", createdAt: now };
+  const gWeek2 = { id: "goal_week_privat", areaId: "area_privat", level: "week", period: { year, week }, parentId: null, title: "3x sport diese woche schaffen", manualProgress: 60, origin: "user_defined", createdAt: now };
 
   const goals = [gYear, gQuarter, gMonth, gWeekPitch, gWeekCalls, gWeek2];
 
@@ -61,11 +63,14 @@ function seedData() {
     { id: uid("task"), title: "laufen, 30 min", date: now, areaId: "area_privat", goalId: gWeek2.id, scheduledTime: "08:30", estimatedMinutes: 30, done: true, createdAt: now },
   ];
 
+  // habit_sport ist testweise mit gWeek2 ("3x sport diese woche schaffen")
+  // verknüpft — zeigt, wie ein habit zusätzlich zu tasks auf den
+  // fortschritt eines ziels einzahlt (goalId, siehe architecture.md §4.6).
   const habits = [
-    { id: "habit_dusche", name: "kalt duschen", areaId: null, createdAt: now },
-    { id: "habit_meditation", name: "meditieren", areaId: null, createdAt: now },
-    { id: "habit_sport", name: "sport", areaId: "area_privat", createdAt: now },
-    { id: "habit_stretch", name: "stretching", areaId: null, createdAt: now },
+    { id: "habit_dusche", name: "kalt duschen", areaId: null, goalId: null, createdAt: now },
+    { id: "habit_meditation", name: "meditieren", areaId: null, goalId: null, createdAt: now },
+    { id: "habit_sport", name: "sport", areaId: "area_privat", goalId: gWeek2.id, createdAt: now },
+    { id: "habit_stretch", name: "stretching", areaId: null, goalId: null, createdAt: now },
   ];
 
   return {
@@ -125,6 +130,12 @@ export function load() {
   db.habits ??= [];
   db.habitLogs ??= [];
   db.settings ??= seedData().settings;
+  // rückwärtskompatibel: neue, optionale felder auf bereits gespeicherten
+  // alt-daten ergänzen (architecture.md §2.2/§4.1/§4.6 — habit-ziel-
+  // verknüpfung + ziel-herkunft), damit bestehende lokale datenbestände
+  // beim nächsten laden nicht brechen.
+  db.habits.forEach((h) => (h.goalId ??= null));
+  db.goals.forEach((g) => (g.origin ??= "user_defined"));
   save();
   return db;
 }
