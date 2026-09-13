@@ -39,6 +39,12 @@ reihenfolge zum einlesen bei neuen sessions: **context → architecture → memo
 
 **iteration v0.3.0** macht `app/` sofort auf dem handy nutzbar: als PWA installierbar (`manifest.json`/`sw.js`), über GitHub Pages hostbar (`.github/workflows/pages.yml`), und mit **optionalem, echtem cloud-sync** (Supabase, `js/cloud.js`) — die gesamte lokale datenbank wird als ein json-dokument pro angemeldeter person synchronisiert (last-write-wins), damit mac, iphone und web dieselben daten zeigen. einrichtung in `app/CLOUD_SETUP.md`. dies ist ein **vorgezogener zwischenstand** der in `architecture.md` §6 ohnehin für "v2" geplanten sync-strategie, kein ersatz für Auth0/die spätere supabase-vollintegration.
 
+**iteration v0.4.0 — app-flow grundlegend neu gedacht und umgesetzt.** markus fand den ursprünglichen sieben-module-aufbau nicht überzeugend ("gefällt mir noch nicht, denk das nochmal mutig neu"). nach brainstorming + mockup-visualisierung + zwei konkretisierungsrunden in `architecture.md` §2.2 festgeschrieben und jetzt in `app/` umgesetzt:
+- **drei haupt-bereiche statt sieben**: `strom` (ein capture-feld, lokale einordnungs-heuristik todo/gedanke/gefühl), `kompass` (ziel-pfad jahr→monat→woche, lokaler "ki-entwurf"-mechanismus für monats-/wochenziele, habits zählen jetzt mit auf ziel-fortschritt ein), `verlauf` (vereinte zeitachse aus todos/habits/tagebuch/mood statt getrennter dashboards).
+- **login-gate** (passwortlos, magic-link) + **onboarding** (bereiche + avatar) — mit einem **wichtigen, nach einer review-runde behobenen fehler**: die erste umsetzung hatte den login versehentlich zur vollständigen cloud-setup-pflicht gemacht (widersprach dem offline-first-leitprinzip). jetzt gibt es einen expliziten "lokal ausprobieren"-ausweg, cloud/login bleiben empfohlen, sind aber keine harte voraussetzung.
+- **review-durchlauf** (feedbackgeber + tester-adhs, auf ausdrücklichen nutzer-wunsch) fand diesen blocker sowie eine notizen-auffindbarkeits-lücke und fehlenden capture-draft-schutz — alle behoben, siehe `CHANGELOG.md`.
+- `app/` ist damit erstmals als **installierbare beta** gedacht (PWA, auf dem eigenen mac über safari/chrome "zum dock hinzufügen"/"app installieren" nutzbar) — nicht mehr nur entwicklungs-zwischenstand.
+
 ## 5. versionierung der iterationen
 
 - die app folgt **semver** (`v0.1.0`, `v0.2.0`, …) — solange kein stabiles v1 existiert, bleibt die major-version `0`.
@@ -68,8 +74,9 @@ zusätzlich (über den ursprünglichen vorschlag hinaus, aus nutzer-feedback): n
 
 ## 8. nächste schritte
 
-1. `native/` in Xcode öffnen und gegenprüfen/korrigieren — dieser code wurde nicht kompiliert, ist aber jetzt der bestätigte hauptweg.
-2. **iteration `v0.3.0`**: ki-schicht nach `architecture.md` §2.1 umsetzen (`AIProvider`-protokoll, `OnDeviceAIClient` als erstes, `OllamaClient` optional danach) — betrifft `PlanDayUseCase`, `TranscriptProcessorUseCase`, `JournalReviewUseCase`, `CoachFeedbackUseCase`, ki-assistent (§4.7).
-3. feedback-backend (`architecture.md` §4.11) technisch festlegen und anbinden, statt des `mailto:`-fallbacks.
-4. `app/` bleibt als sofort nutzbarer web-prototyp bestehen (kann bei bedarf weiter mitgepflegt werden), ist aber kein zielarchitektur-pfad mehr — kein weiterer investitionsschwerpunkt.
-5. noch offene technische detailfragen (`architecture.md` §9, `context.md` §7 "noch offen"): konkrete Ollama-modellwahl, feedback-backend-technologie.
+1. **challenges** (`architecture.md` §4.13) — noch nicht umgesetzt, bewusst als eigene, klar abgegrenzte nächste iteration zurückgestellt (1:1, einladungslink-basiert, auf der bestehenden supabase-basis).
+2. `native/` in Xcode öffnen und gegenprüfen/korrigieren — dieser code wurde nicht kompiliert und spiegelt den neuen v0.4.0-app-flow (strom/kompass/verlauf) noch nicht wider.
+3. ki-schicht nach `architecture.md` §2.1 umsetzen (`AIProvider`-protokoll) — würde direkt mehrere aktuell nur lokal-heuristische stellen ablösen: `strom.js#classify()`, den kompass-"ki-entwurf"-mechanismus, die verlauf-mood-/"aufgefallen"-heuristik.
+4. aus der review-runde als "fehlt noch für den adhs-alltag" identifiziert (nicht kritisch, aber wertvoll): lokale erinnerungen (morgen-plan-nudge, abend-tagebuch-prompt — bisher komplett ungebaut), automatische bereichszuordnung neu erfasster todos, quick-win-vorschlag bei leerem "jetzt wichtig".
+5. feedback-backend (`architecture.md` §4.11) technisch festlegen und anbinden, statt des `mailto:`-fallbacks.
+6. noch offene technische detailfragen (`architecture.md` §9, `context.md` §7 "noch offen"): konkrete Ollama-modellwahl, feedback-backend-technologie.
