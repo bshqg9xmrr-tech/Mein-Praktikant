@@ -391,6 +391,43 @@ label.field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; 
 .avatar-pick svg { width: 100%; height: auto; }
 .avatar-pick.selected { border-color: var(--accent); }
 
+/* ---------- verlauf — zeitstrahl (architecture.md §2.2, ersetzt übersicht + tagebuch-liste + habit-historie) ---------- */
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-left: 26px;
+}
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--border);
+}
+.timeline-item { position: relative; }
+.timeline-item .mood-dot {
+  position: absolute;
+  left: -19px;
+  top: 19px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2.5px solid var(--bg-2);
+  box-shadow: 0 0 0 1px var(--border);
+}
+.timeline-item.is-today .mood-dot {
+  width: 15px;
+  height: 15px;
+  left: -21px;
+  top: 17px;
+}
+.timeline-date { font-size: 11px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.4px; }
+.timeline-line-item { font-size: 12.5px; color: var(--text-soft); line-height: 1.5; }
+
 /* ---------- desktop layout ---------- */
 @media (min-width: 900px) {
   #app { flex-direction: row; }

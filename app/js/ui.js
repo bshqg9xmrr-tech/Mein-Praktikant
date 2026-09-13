@@ -62,8 +62,15 @@ export function toast(message, { actionLabel, onAction, onDismiss, duration = 26
   }
 }
 
-export function openModal(innerHtml, { onMount } = {}) {
+// optionaler onClose-callback: feuert, egal ob das modal per backdrop-klick
+// oder über closeModal() (z. b. ein eigener schließen-button) geschlossen
+// wird — praktisch für aufrufer, die nach dem schließen neu rendern müssen
+// (siehe verlauf.js, das journal.js/habits.js in einem modal einbettet).
+let modalOnClose = null;
+
+export function openModal(innerHtml, { onMount, onClose } = {}) {
   const root = document.getElementById("modal-root");
+  modalOnClose = onClose || null;
   root.innerHTML = `
     <div class="modal-backdrop" id="modal-backdrop">
       <div class="modal">${innerHtml}</div>
@@ -76,6 +83,9 @@ export function openModal(innerHtml, { onMount } = {}) {
 
 export function closeModal() {
   document.getElementById("modal-root").innerHTML = "";
+  const cb = modalOnClose;
+  modalOnClose = null;
+  if (cb) cb();
 }
 
 // wichtig: jedes icon bekommt explizite width/height-attribute. ohne sie

@@ -2,6 +2,44 @@
 
 alle nennenswerten iterationen dieses projekts werden hier protokolliert. format angelehnt an [keep a changelog](https://keepachangelog.com/), versionierung nach [semver](https://semver.org/) (solange `0.x.y`: alles kann sich noch ändern).
 
+## [unveröffentlicht] — 2026-09-13 — "verlauf" gefüllt: zeitstrahl + abend-tagebuch + habits als modal (`app/`) — klärungsrunde damit vollständig umgesetzt
+
+nutzer-auftrag: teil 5 (letzter view) der klärungsrunde — `verlauf.js` (bisher nur ein platzhalter) zeigt jetzt einen echten, vertikalen zeitstrahl aus todos/habits/tagebuch, inkl. wiedererreichbarem tagebuch-eintrag und habit-abhaken (beide bisher nur über keinen tab mehr erreichbar) über modals (`architecture.md` §2.2, `context.md` §3.3/§3.7/§3.11). **damit ist das komplette, in der klärungsrunde neu gedachte konzept (strom/kompass/verlauf, login-gate, onboarding) jetzt vollständig in `app/` umgesetzt** — siehe die vorherigen drei einträge unten ("login-pflicht + onboarding-wizard", "neue navigation + 'strom'", "'kompass' gefüllt") für die anderen teile.
+
+### hinzugefügt/geändert — `app/js/verlauf.js`
+- **vertikaler zeitstrahl** der letzten 21 tage (praktikabler zeitraum, nicht zu lang, wie in der aufgabenstellung gefordert): pro tag mit irgendeiner aktivität (erledigte todos, abgehakte habits, ein tagebuch-eintrag) ein kompakter eintrag — anzahl erledigter todos, welche habits abgehakt wurden (nutzt `habits.js#currentStreak`/`isDoneToday` unverändert wieder), ein auf ~60 zeichen gekürzter tagebuch-auszug. tage ganz ohne jegliche aktivität werden übersprungen; der heutige tag bleibt als einziger immer sichtbar (fester einstiegspunkt für die reflexions-aktion, siehe unten), auch wenn er noch leer ist.
+- **filter-pills** (alle/ziele/habits/stimmung): rein clientseitig (kein neu-laden), blenden pro tages-eintrag die jeweils nicht relevanten teile aus und lassen tage ohne für den filter relevante aktivität ganz weg (der heutige tag bleibt filterunabhängig als anker sichtbar).
+- **mood-punkt = zeitstrahl-punkt**: der farbige punkt auf der zeitstrahl-linie ist zugleich der im mockup geforderte "mood-punkt pro tag" — eine stelle im markup für beide anforderungen. **wichtig, wie überall im projekt klar gekennzeichnet (keine echte stimmungserkennung)**: existiert ein `JournalEntry` für den tag, wird die farbe aus dessen bereits selbst gewählten `feelings` abgeleitet (feste, grobe zuordnung "zufrieden/ruhig/motiviert/dankbar" → positiv, "erschöpft/unruhig/überfordert/gereizt" → angespannt), ersatzweise aus einer ganz einfachen wortlisten-suche im freitext (dieselbe ehrlichkeits-konvention wie `strom.js#classify()`) — ohne eindeutigen ausschlag neutral-grau ("gemischt/unklar"). gibt es gar keinen tagebuch-eintrag, aber sonst aktivität an dem tag, ist der punkt ebenfalls neutral-grau, aber mit dem klaren label "keine angabe" statt eine stimmung zu erfinden.
+- **"aufgefallen"-karte** (im bestehenden `.ai-banner`-stil, akzent-getönt): zeigt höchstens **eine** einzelne, lokal berechnete auffälligkeit — zuerst versucht, ein habit zu finden, das deutlich länger nicht abgehakt wurde als sein bisheriger durchschnittlicher abstand zwischen erledigungen (braucht mind. 3 bisherige logs, sonst ist "sonst üblich" nicht aussagekräftig); sonst ein klarer wochenvergleich bei erledigten todos (>= 25 prozentpunkte relative veränderung, nur bei ausreichender basis in der vorwoche). reicht die datenlage für keinen der beiden nicht aus, erscheint **gar keine karte** — lieber nichts zeigen als etwas erfinden. im UI als "lokale statistik, keine ki" beschriftet.
+- **"heute reflektieren" / "heutigen eintrag bearbeiten"**: button am heutigen zeitstrahl-eintrag, öffnet `journal.js`s **komplett unverändertes** `render()` in einem modal (siehe unten).
+- **"habits heute abhaken"**: klickbare karte oben im view (mit live-zusammenfassung "N von M heute erledigt"), öffnet `habits.js`s **komplett unverändertes** `render()` ebenfalls in einem modal.
+
+### geändert — `app/js/ui.js`
+- `openModal()` akzeptiert jetzt einen optionalen dritten parameter `onClose` — feuert, egal ob das modal per backdrop-klick oder per `closeModal()` (z. b. ein eigener schließen-button) geschlossen wird. rein additiv, bestehende aufrufer (`strom.js`, `kompass.js`) unverändert kompatibel. `verlauf.js` nutzt das, um nach dem schließen von journal-/habits-modal neu zu rendern (frischer eintrag/abgehaktes habit sofort im zeitstrahl sichtbar).
+
+### wiederverwendet, nicht neu gebaut
+- `journal.js` und `habits.js` mussten **nicht angepasst werden** — beide suchen ihren render-container schon immer per `document.getElementById("view-journal"/"view-habits")`; `verlauf.js` stellt diesen container einfach innerhalb eines modals bereit (`<div id="view-journal">`/`<div id="view-habits">`) und ruft die bestehenden `render()`-funktionen unverändert auf. echte streak-berechnung, strukturierte tagebuch-felder inkl. automatisch übernommener erledigter todos — alles 1:1 aus den bestehenden modulen.
+
+### geändert — `app/styles.css`
+- neue, kleine klassen für den zeitstrahl (`.timeline`, `.timeline-item`, `.mood-dot`, `.timeline-date`, `.timeline-line-item`) — vertikale linie + punkte pro tag, wie im abgestimmten mockup. bestehende bausteine (`.card`, `.ai-banner`, `.pill`, `.chip-row`, `.btn-ghost`, `.empty-hint`) wiederverwendet, keine neue design-sprache erfunden.
+
+### getestet
+- lokal per `python3 -m http.server` + playwright/chromium (login-gate via `window.__mpDebugSession`-test-hook + vorkonfiguriertem, fiktivem cloud-projekt übersprungen, onboarding per "später" übersprungen — kein echtes postfach in dieser umgebung verfügbar, wie in den vorherigen iterationen):
+  - initialer zustand (seed-daten, ein heute erledigtes todo): zeitstrahl zeigt korrekt nur den heutigen eintrag ("1 todo erledigt", mood-punkt grau "keine angabe"), keine "aufgefallen"-karte (datenlage zu dünn) — wie erwartet.
+  - "habits heute abhaken" → modal öffnet mit `habits.js`s echter liste, ein habit abgehakt → streak-pill wechselt korrekt von "0 tage streak" auf "1 tag streak" (per DOM-check innerhalb des modals verifiziert), zusammenfassungs-karte im hintergrund aktualisiert sich nach dem schließen auf "1 von 4 heute erledigt", zeitstrahl-eintrag zeigt "1 habit abgehakt: kalt duschen".
+  - "heute reflektieren" → modal öffnet mit `journal.js`s echtem formular, freitext + ein gefühl ("zufrieden") gesetzt, gespeichert, modal geschlossen → button-label wechselt korrekt zu "heutigen eintrag bearbeiten", zeitstrahl-eintrag zeigt den gekürzten auszug + mood-punkt jetzt grün ("eher positiv").
+  - filter-pills "stimmung"/"habits"/"ziele" blenden jeweils korrekt nur die relevanten zeilen des heutigen eintrags ein, andere teile werden ausgeblendet — verifiziert per textinhalt-vergleich.
+  - `computeInsight()` gezielt mit synthetischen `localStorage`-daten getestet (ein habit mit 10 logs im 1-tages-rhythmus, dann 6 tage lücke) → "aufgefallen"-karte erscheint korrekt mit "seit 6 tagen kein „meditieren“ abgehakt — länger als bei dir sonst üblich." im `.ai-banner`-stil.
+  - mobile viewport (iPhone-13-emulation) und desktop-sidebar-layout beide geprüft, sehen wie erwartet aus (screenshots geprüft).
+  - navigation zu strom/kompass/einstellungen bleibt unbeeinträchtigt.
+  - **keine js-konsolenfehler** (einzige beobachtete meldung: der bereits aus allen vorherigen iterationen bekannte, blockierte netzwerkzugriff auf `esm.sh`, reine sandbox-einschränkung dieser testumgebung, kein code-fehler).
+
+### noch offen / bewusst nicht enthalten
+- die mood-heuristik und die "aufgefallen"-logik sind, wie oben ausführlich beschrieben, bewusst einfache, lokal nachvollziehbare berechnungen — kein sprachmodell, kein sentiment-verständnis. echte ki-gestützte muster-erkennung (`architecture.md` §2.1) folgt erst mit der ki-schicht.
+- `overview.js`s wochen-balkendiagramm (erledigte todos letzte 7 tage) ist inhaltlich in den neuen zeitstrahl übergegangen, aber nicht 1:1 als diagramm — bewusste vereinfachung, ein zweites, redundantes diagramm neben dem zeitstrahl hätte keinen zusätzlichen nutzen gebracht.
+- kein diktat-button im journal-modal (unverändert aus `journal.js`, folgt weiterhin erst mit der ki-anbindung).
+- `native/` unverändert.
+
 ## [unveröffentlicht] — 2026-09-13 — "kompass" gefüllt: ziel-pfad + lokaler ki-entwurf + habit-verknüpfung (`app/`)
 
 nutzer-auftrag: teil 4 der klärungsrunde (siehe einträge weiter unten) — `kompass.js` (bisher nur ein platzhalter) zeigt jetzt die tatsächliche ziel-hierarchie als verjüngenden pfad, inkl. eines einfachen, lokalen "ki-entwurf"-mechanismus für die ebenen unter dem jahresziel und einer oberfläche zum habit-ziel-verknüpfen (`architecture.md` §2.2/§4.1, `context.md` §3.1).
