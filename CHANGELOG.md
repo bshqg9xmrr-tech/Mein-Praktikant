@@ -2,6 +2,35 @@
 
 alle nennenswerten iterationen dieses projekts werden hier protokolliert. format angelehnt an [keep a changelog](https://keepachangelog.com/), versionierung nach [semver](https://semver.org/) (solange `0.x.y`: alles kann sich noch ändern).
 
+## [unveröffentlicht] — 2026-09-13 — "kompass" gefüllt: ziel-pfad + lokaler ki-entwurf + habit-verknüpfung (`app/`)
+
+nutzer-auftrag: teil 4 der klärungsrunde (siehe einträge weiter unten) — `kompass.js` (bisher nur ein platzhalter) zeigt jetzt die tatsächliche ziel-hierarchie als verjüngenden pfad, inkl. eines einfachen, lokalen "ki-entwurf"-mechanismus für die ebenen unter dem jahresziel und einer oberfläche zum habit-ziel-verknüpfen (`architecture.md` §2.2/§4.1, `context.md` §3.1).
+
+### hinzugefügt/geändert — `app/js/kompass.js`
+- **pfad-darstellung pro bereich**: bereichs-pills oben (default: der erste bereich mit einem jahresziel, sonst der erste bereich überhaupt) zeigen eine karten-kette jahresziel → seine kinder (je nachdem, was tatsächlich existiert, über `goals.js#childrenOf`/`goalsForLevel`) → wochenziel(e) — jede karte etwas kleiner als die darüber ("verjüngender pfad", wie im abgestimmten mockup), mit bereichsfarbigem, ebenfalls verjüngendem verbindungs-strich links. jede karte zeigt ihren fortschrittsbalken über `goals.js#effectiveProgress()` (bereits erweitert um habit-konsistenz, siehe eintrag "datenmodell: habits zählen jetzt auf ziele ein" weiter unten).
+- **badges nach `goal.origin`**: "von dir" (`user_defined`), gestrichelte karte + "ki-vorschlag · offen" mit "ändern"/"bestätigen"-buttons (`ai_proposed`), "ki-entwurf · bestätigt" (`user_confirmed`) — vollständig implementiert, greift automatisch, sobald `ai_proposed`-ziele existieren.
+- **leerer zustand**: kein jahresziel im gewählten bereich → ein "jahresziel für {bereich} festlegen"-cta öffnet ein einfaches formular (titel), nutzt `goals.js#createGoal()` wieder (wie schon in `goals-view.js`).
+- **einfacher, rein lokaler "ki-entwurf"-mechanismus** (ausdrücklich **keine echte ki**, dieselbe ehrlichkeits-konvention wie `strom.js#classify()`): hat ein blatt-ziel (jahr/quartal/monat ohne unterziele) eine vorschlagbare nächste ebene, erscheint ein button "monats-/wochenziel vorschlagen lassen". der vorschlag ist ein simpler, deterministischer textbaustein (übernimmt den titel des übergeordneten ziels leicht umformuliert, z. b. „…“ — schritt für diesen monat/diese woche) und wird mit `origin: "ai_proposed"` als kind angelegt. "bestätigen" setzt `origin` direkt auf `user_confirmed`; "ändern" öffnet ein formular zum anpassen des titels, setzt `origin` beim speichern ebenfalls auf `user_confirmed`.
+- **pragmatische vereinfachung** (dokumentiert im code-kommentar, dieselbe art von entscheidung wie das weglassen der `day`-ebene, architecture.md §5): der entwurfs-mechanismus bildet nur "jahr → monat → woche" nach und überspringt die quartalsebene automatisch (ein jahresziel ohne unterziele bekommt direkt einen monatsziel-vorschlag, kein automatischer quartalsziel-zwischenschritt). eine quartalsebene lässt sich weiterhin ganz normal manuell anlegen — `goals.js` unterstützt und zeigt sie unverändert korrekt an (siehe die bestehende, vollständige tecis-kette in den seed-daten, die von diesem schritt nicht angefasst wurde).
+- **habit-verknüpfung über die oberfläche** (bisher nur direkt in den daten möglich, siehe "noch offen" im eintrag "datenmodell: habits zählen jetzt auf ziele ein" weiter unten): jede blatt-ziel-karte zeigt ihre direkt verlinkten todos und habits als kurze zusammenfassung + pill-liste ("3 todos · 1 habit verlinkt"), plus einen "+ habit verknüpfen"-button — öffnet ein auswahl-modal mit allen `Habits.all()`, setzt `habit.goalId` (reassignment möglich, mit hinweis, falls ein habit schon an ein anderes ziel verknüpft ist). ein klick auf ein verlinktes habit-pill löst die verknüpfung wieder (mit bestätigung).
+
+### geändert — `app/styles.css`
+- drei neue, kleine klassen für die ki-entwurf-optik (`.card-ai-draft`, `.pill-badge-ai`, `.pill-badge-confirmed`) — bestehende liquid-glass-bausteine (`.card`, `.pill`, `.progress-track`, `.chip-row`, `.btn-ghost`, `.ai-note`) wiederverwendet, keine neue design-sprache erfunden.
+
+### getestet
+- lokal per `python3 -m http.server` + playwright/chromium (login-gate via `window.__mpDebugSession`-test-hook übersprungen, onboarding per "später" auf beiden schritten übersprungen — kein echtes postfach in dieser umgebung verfügbar, wie in den vorherigen iterationen):
+  - bereichswechsel funktioniert; default-auswahl ist korrekt "tecis" (einziger bereich mit jahresziel in den seed-daten) und zeigt den vollen pfad jahr → quartal → monat → 2× woche mit den erwarteten, unveränderten fortschrittswerten (60/60/60/100/20%) und durchweg "von dir"-badges.
+  - "privat" (in den seed-daten nur ein verwaistes wochenziel ohne jahresziel) zeigt korrekt den leeren zustand; testweise ein jahresziel angelegt → "monatsziel vorschlagen lassen" erzeugt einen `ai_proposed`-eintrag mit gestricheltem rahmen + korrektem badge.
+  - "ändern" (titel anpassen + speichern) und "bestätigen" (unverändert übernehmen) setzen `origin` beide korrekt auf `user_confirmed`, per direkter `localStorage`-prüfung verifiziert.
+  - ein zuvor unverlinktes habit ("meditieren") an ein wochenziel mit `manualProgress: 100` gehängt → fortschrittsbalken reagiert sofort (fällt auf die habit-konsistenz zurück, 0% ohne log, korrekt anteilig nach einem simulierten `HabitLog`-eintrag für heute, zurück auf 100% nach dem lösen der verknüpfung) — bestätigt, dass `effectiveProgress()` aus teil 1 korrekt einfließt.
+  - navigation zu strom/verlauf/einstellungen bleibt unbeeinträchtigt.
+  - **keine js-konsolenfehler** (einzige beobachtete meldung: der bereits aus früheren iterationen bekannte, blockierte netzwerkzugriff auf `esm.sh`, reine sandbox-einschränkung dieser testumgebung, kein code-fehler).
+
+### noch offen / bewusst nicht enthalten
+- **echter ki-vorschlags-flow bleibt aus** — der entwurfs-mechanismus ist, wie oben beschrieben, ein einfacher textbaustein, kein sprachmodell. `BreakdownGoalUseCase` (architecture.md §4.1) folgt erst mit der ki-schicht aus §2.1.
+- die quartals-ebene wird vom entwurfs-mechanismus bewusst nicht automatisch vorgeschlagen (siehe oben) — manuelles anlegen bleibt möglich.
+- `verlauf.js` bleibt weiterhin nur ein platzhalter (nächster schritt).
+
 ## [unveröffentlicht] — 2026-09-13 — neue navigation + "strom" (`app/`)
 
 nutzer-auftrag: teil 3 der klärungsrunde (siehe eintrag weiter unten) — die neue 3-bereiche-navigation (strom/kompass/verlauf) ist jetzt tatsächlich in `app/` umgesetzt, und "strom" (ersetzt today.js + notes.js) ist der erste der drei bereiche, der wirklich fertig gebaut ist (`architecture.md` §2.2, `context.md` §3.1).
