@@ -1,7 +1,14 @@
 // sw.js — minimaler service worker, macht die app offline verfügbar
 // (voraussetzung für "zum home-bildschirm hinzufügen" auf dem iphone).
 
-const CACHE = "mein-praktikant-v1";
+// v2 (review-korrektur, siehe CHANGELOG.md): die precache-liste listete noch
+// module, die seit der "strom/kompass/verlauf"-umstrukturierung von keinem
+// tab mehr importiert werden (goals-view.js/today.js/overview.js), und
+// fehlten dafür mehrere tatsächlich genutzte module (strom.js/kompass.js/
+// verlauf.js/auth-gate.js/onboarding.js/avatars.js/colors.js/areas-ui.js) —
+// dadurch war die offline-garantie direkt nach der PWA-installation nicht
+// zuverlässig, sondern hing an einem ersten erfolgreichen online-ladevorgang.
+const CACHE = "mein-praktikant-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,13 +17,18 @@ const ASSETS = [
   "./js/main.js",
   "./js/storage.js",
   "./js/cloud.js",
+  "./js/auth-gate.js",
+  "./js/onboarding.js",
+  "./js/avatars.js",
+  "./js/colors.js",
+  "./js/areas-ui.js",
   "./js/goals.js",
-  "./js/goals-view.js",
-  "./js/today.js",
+  "./js/strom.js",
+  "./js/kompass.js",
+  "./js/verlauf.js",
   "./js/notes.js",
   "./js/journal.js",
   "./js/habits.js",
-  "./js/overview.js",
   "./js/settings.js",
   "./js/ui.js",
   "./js/ics.js",

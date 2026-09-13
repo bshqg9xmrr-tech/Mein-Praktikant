@@ -10,11 +10,20 @@
 // openHabitsModal() unten). beide module bleiben dafür unangetastet: sie
 // suchen ihren container schon immer per `document.getElementById(...)`,
 // wir stellen diesen container einfach innerhalb des modals bereit.
+//
+// KORREKTUR nach einer review-runde (siehe CHANGELOG.md "review-korrekturen"):
+// notes.js war seit der "strom"-einführung von keinem tab mehr erreichbar —
+// ältere notizen/gedanken/gefühle (strom.js legt beide als Note ab, siehe
+// dortigen kommentar) waren zwar weiterhin in den daten vorhanden, aber in
+// der UI nirgendwo mehr auffindbar (strom.js zeigt nur den heutigen tag).
+// dasselbe modal-muster wie bei journal.js/habits.js schließt diese lücke:
+// openNotesModal() unten bettet notes.js's unverändertes render() ein.
 
-import { Tasks, Habits, HabitLogs, JournalEntries, todayISO } from "./storage.js";
+import { Tasks, Habits, HabitLogs, JournalEntries, Notes, todayISO } from "./storage.js";
 import { isDoneToday } from "./habits.js";
 import * as journal from "./journal.js";
 import * as habitsModule from "./habits.js";
+import * as notesModule from "./notes.js";
 import { esc, openModal, closeModal, ICONS } from "./ui.js";
 
 // letzte 3 wochen — genug für einen sinnvollen rückblick, ohne dass der
@@ -201,6 +210,22 @@ function openJournalModal() {
   });
 }
 
+function openNotesModal() {
+  const html = `
+    <div style="display:flex; justify-content:flex-end;">
+      <button class="btn-icon" id="modal-close-notes" title="schließen">&times;</button>
+    </div>
+    <div id="view-notes"></div>
+  `;
+  openModal(html, {
+    onMount: (root) => {
+      root.querySelector("#modal-close-notes").addEventListener("click", closeModal);
+      notesModule.render();
+    },
+    onClose: () => render(),
+  });
+}
+
 function openHabitsModal() {
   const html = `
     <div style="display:flex; justify-content:flex-end;">
@@ -269,6 +294,7 @@ export function render() {
 
   const habits = Habits.all();
   const habitsDoneToday = habits.filter((h) => isDoneToday(h.id)).length;
+  const notesCount = Notes.all().length;
   const insight = computeInsight();
 
   el.innerHTML = `
@@ -284,6 +310,15 @@ export function render() {
       <div style="flex:1; min-width:0;">
         <div style="font-weight:700; font-size:13.5px;">habits heute abhaken</div>
         <div style="font-size:11.5px; color:var(--text-soft); margin-top:2px;">${habits.length ? `${habitsDoneToday} von ${habits.length} heute erledigt` : "noch keine habits angelegt"}</div>
+      </div>
+      ${ICONS.chevronRight}
+    </div>
+
+    <div class="card" id="open-notes-card" role="button" tabindex="0" style="display:flex; align-items:center; gap:12px; cursor:pointer;">
+      <div style="width:36px; height:36px; border-radius:12px; background:var(--accent-soft); color:var(--accent); display:flex; align-items:center; justify-content:center; flex-shrink:0;">${ICONS.note}</div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:700; font-size:13.5px;">notizen &amp; gedanken</div>
+        <div style="font-size:11.5px; color:var(--text-soft); margin-top:2px;">${notesCount ? `${notesCount} gespeichert — auch ältere hier wiederfinden` : "noch keine gespeichert"}</div>
       </div>
       ${ICONS.chevronRight}
     </div>
@@ -318,6 +353,15 @@ export function render() {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       openHabitsModal();
+    }
+  });
+
+  const notesCard = el.querySelector("#open-notes-card");
+  notesCard.addEventListener("click", openNotesModal);
+  notesCard.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openNotesModal();
     }
   });
 

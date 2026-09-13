@@ -72,7 +72,11 @@ export function render() {
     const input = el.querySelector("#habit-name");
     const name = input.value.trim();
     if (!name) return;
-    Habits.add({ id: uid("habit"), name, areaId: null, createdAt: todayISO() });
+    // goalId explizit auf null setzen statt das feld ganz wegzulassen —
+    // analog zum defensiven `habit.goalId ??= null`-muster in
+    // storage.js#load(), aber gleich von anfang an sauber statt sich auf
+    // die nachträgliche migration zu verlassen (review-korrektur).
+    Habits.add({ id: uid("habit"), name, areaId: null, goalId: null, createdAt: todayISO() });
     render();
   });
 }

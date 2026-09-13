@@ -60,6 +60,14 @@ const ORIGIN_BADGE = {
 // weglassen der `day`-ebene, siehe architecture.md §5).
 const NEXT_PROPOSABLE_LEVEL = { year: "month", quarter: "month", month: "week" };
 
+// review-korrektur (siehe CHANGELOG.md "review-korrekturen"): `LEVEL_LABEL`
+// liefert nur das nomen selbst ("woche"/"monat") — für das zusammengesetzte
+// "-ziel"-wort braucht "woche" ein zusätzliches "n" ("wochenziel"), eine
+// simple konkatenation `${LEVEL_LABEL[level]}sziel` ergab für "week" das
+// falsche "wochesziel". eigene, kleine map statt eines allgemeinen,
+// fehleranfälligen suffix-regel-mechanismus für nur zwei werte.
+const LEVEL_GOAL_LABEL = { month: "monatsziel", week: "wochenziel" };
+
 function proposeSubGoal(parentGoal, level) {
   const suffix = level === "month" ? "schritt für diesen monat" : "schritt für diese woche";
   return Goals.add({
@@ -79,7 +87,7 @@ function handlePropose(goalId, level) {
   const parent = Goals.get(goalId);
   if (!parent) return;
   proposeSubGoal(parent, level);
-  toast(`${LEVEL_LABEL[level]}sziel vorgeschlagen — lokaler entwurf, bitte prüfen.`);
+  toast(`${LEVEL_GOAL_LABEL[level]} vorgeschlagen — lokaler entwurf, bitte prüfen.`);
   render();
 }
 
@@ -227,6 +235,16 @@ function goalCardHtml(goal, area, depth) {
     ? `<div style="${connectorStyle(depth, area)}">${kids.map((k) => goalCardHtml(k, area, depth + 1)).join("")}</div>`
     : "";
 
+  // ui_guidelines.md §5: fortschrittsanzeigen sollen der prozentzahl eine
+  // kurze text-entsprechung zur seite stellen, wo sich das natürlich
+  // ergibt. bei einem blatt-ziel mit direkt verlinkten todos gibt es eine
+  // konkrete "von X"-größe ("3 von 5 todos") — bei einem rein unterziel-
+  // basierten fortschritt (kein blatt, oder ein blatt ganz ohne verlinkte
+  // todos) fehlt diese größe, dort bleibt die prozentzahl allein sinnvoll
+  // (review-korrektur, siehe CHANGELOG.md).
+  const linkedTasksForProgress = isLeaf && !isDraft ? tasksOf(goal.id) : [];
+  const doneLinkedTasksCount = linkedTasksForProgress.filter((t) => t.done).length;
+
   return `
     <div class="card ${isDraft ? "card-ai-draft" : ""}" data-goal-id="${goal.id}" style="padding:${pad}px;">
       <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
@@ -241,6 +259,11 @@ function goalCardHtml(goal, area, depth) {
         <div class="progress-track" style="flex:1;"><div class="progress-fill" style="width:${progress}%; background:${area ? area.color : "var(--accent)"};"></div></div>
         <div style="font-size:13px; font-weight:800; flex-shrink:0;">${progress}%</div>
       </div>
+      ${
+        linkedTasksForProgress.length
+          ? `<div style="font-size:11px; color:var(--text-soft); margin-top:4px;">${doneLinkedTasksCount} von ${linkedTasksForProgress.length} todo${linkedTasksForProgress.length === 1 ? "" : "s"} erledigt</div>`
+          : ""
+      }
 
       ${
         isDraft
@@ -256,7 +279,7 @@ function goalCardHtml(goal, area, depth) {
       ${!isDraft && isLeaf ? linkedItemsHtml(goal) : ""}
       ${
         !isDraft && isLeaf && nextLevel
-          ? `<button class="btn-ghost" data-action="propose" data-id="${goal.id}" data-level="${nextLevel}" style="margin-top:8px; padding-left:0;">${ICONS.sparkle} ${LEVEL_LABEL[nextLevel]}sziel vorschlagen lassen</button>`
+          ? `<button class="btn-ghost" data-action="propose" data-id="${goal.id}" data-level="${nextLevel}" style="margin-top:8px; padding-left:0;">${ICONS.sparkle} ${LEVEL_GOAL_LABEL[nextLevel]} vorschlagen lassen</button>`
           : ""
       }
     </div>

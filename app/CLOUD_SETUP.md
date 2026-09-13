@@ -1,12 +1,17 @@
 # cloud-sync einrichten (mac ⇄ iphone ⇄ web)
 
-**diese einrichtung ist inzwischen voraussetzung für die app** — der login
-ist pflicht, einmalig pro gerät (`architecture.md` §2.2/§4.8, `context.md`
-§3.10). ohne ein eingetragenes supabase-projekt zeigt die app beim start
-einen setup-hinweis statt der normalen ansicht. diese anleitung richtet
-genau dieses (kostenlose) projekt ein und schaltet zugleich echten
-cloud-sync über [supabase](https://supabase.com) frei, damit mac, iphone und
-web-browser danach dieselben daten sehen.
+**cloud-sync + login sind der empfohlene weg, aber keine voraussetzung mehr**
+(`architecture.md` §2.2/§4.8, `context.md` §3.10 — **korrektur nach einer
+review-runde**, siehe `CHANGELOG.md` "review-korrekturen": der ursprüngliche
+stand hier erzwang dieses setup, bevor die app überhaupt nutzbar war, was
+claude.md §3.1 widersprach). der setup-bildschirm bietet inzwischen einen
+klar sichtbaren "erstmal lokal ausprobieren"-ausweg — ohne dieses setup
+funktioniert die app komplett normal lokal auf einem gerät, nur eben ohne
+sync zwischen geräten und ohne die für challenges nötige konto-zuordnung.
+diese anleitung richtet das (kostenlose) supabase-projekt ein und schaltet
+echten cloud-sync frei, damit mac, iphone und web-browser danach dieselben
+daten sehen — jederzeit nachholbar, auch später noch über die
+cloud-sync-karte in den einstellungen.
 
 dauer: ca. 5 minuten, einmalig.
 

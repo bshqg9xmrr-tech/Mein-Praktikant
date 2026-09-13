@@ -2,6 +2,47 @@
 
 alle nennenswerten iterationen dieses projekts werden hier protokolliert. format angelehnt an [keep a changelog](https://keepachangelog.com/), versionierung nach [semver](https://semver.org/) (solange `0.x.y`: alles kann sich noch ändern).
 
+## [unveröffentlicht] — 2026-09-13 — review-korrekturen: login-ausweg, notizen wieder auffindbar, capture-draft, sw.js-precache, textbug (`app/`)
+
+nutzer-auftrag: zwei unabhängige review-agenten (feedbackgeber + tester-adhs) haben das komplette, in der klärungsrunde neu umgesetzte konzept (login-gate/onboarding/strom/kompass/verlauf) geprüft. sechs befunde behoben, priorisiert nach schweregrad.
+
+### behoben — BLOCKER: login-gate erzwang vollständiges cloud-setup ohne ausweg (`app/js/auth-gate.js`)
+- der setup-bildschirm (kein supabase konfiguriert) blockte bisher die **gesamte app** ohne alternative — widersprach claude.md §3 leitprinzip 1 und architecture.md §1 (die dortige "ausnahme" bezieht sich nur auf den login selbst, nicht auf ein vorgeschaltetes infrastruktur-setup). ein erster test war ohne vorher angelegtes supabase-konto+projekt+sql-snippet nicht möglich.
+- **fix**: neuer, klar sichtbarer ghost-button "erstmal lokal ausprobieren — ohne cloud, ohne login" auf dem setup-bildschirm (analog zum "später"-link im onboarding). setzt ein lokales flag (`localStorage["mp-local-only"]`), das `resolveStep()` seitdem genauso behandelt wie eine erfolgreiche anmeldung — führt direkt zu onboarding bzw. app, komplett ohne cloud. cloud/login bleiben der empfohlene weg (challenges, geräteübergreifender sync), lassen sich aber jederzeit später über die bereits bestehende cloud-sync-karte in den einstellungen (`settings.js`) nachholen.
+- **dokumentation korrigiert** (als klar erkennbare korrektur nach einer review-runde, nicht rückwirkend umgeschrieben): `architecture.md` §1/§2.2/§4.8, `context.md` §3.10, `app/CLOUD_SETUP.md`, `app/README.md` — login bleibt der geplante normalfall/erste bildschirm, aber mit explizitem opt-out statt hartem zwang.
+
+### behoben — HOCH: notizen/gedanken/gefühle nach dem erfassungstag unauffindbar (`app/js/verlauf.js`)
+- `strom.js` legt gedanken/gefühle als `Note` ab, aber `notes.js` war von keinem tab mehr erreichbar, und `strom.js#recentCaptures()` zeigt nur den heutigen tag — ältere notizen waren in den daten vorhanden, aber in der UI nirgendwo mehr auffindbar.
+- **fix**: neue "notizen & gedanken"-karte in `verlauf.js`, nach demselben modal-muster wie die bestehenden "heute reflektieren"/"habits heute abhaken"-einstiegspunkte — öffnet `notes.js`s unveränderte render-logik in einem modal (`openNotesModal()`). `notes.js` selbst nicht angefasst, nur wieder angebunden.
+
+### behoben — HOCH: capture-text im "strom" geht bei reload/abbruch verloren (`app/js/strom.js`)
+- kein auto-draft für `#capture-input` — tippen, dann reload/tab-wechsel/anruf (adhs-typisches unterbrechungsszenario) ließ den text komplett verschwinden. widerspricht context.md §1 ("sofort festhalten, bevor der gedanke weg ist").
+- **fix**: bei jedem keystroke wird der aktuelle inhalt debounced (300ms) unter `localStorage["mp-capture-draft"]` zwischengespeichert, bei `render()` wiederhergestellt (input-`value`), und beim erfolgreichen absenden (`addFromInput`) wieder gelöscht.
+
+### behoben — MITTEL: `app/sw.js`-precache-liste veraltet
+- listete noch `goals-view.js`/`today.js`/`overview.js` (von keinem tab mehr importiert), fehlte dafür `strom.js`/`kompass.js`/`verlauf.js`/`auth-gate.js`/`onboarding.js`/`avatars.js`/`colors.js`/`areas-ui.js`/`notes.js` — die offline-garantie nach der PWA-installation war dadurch nicht direkt zuverlässig, sondern hing an einem ersten erfolgreichen online-ladevorgang.
+- **fix**: liste auf den tatsächlichen, aktuell importierten modul-baum gebracht (siehe `sw.js`-kommentar), cache-version auf `v2` erhöht, damit der alte, unvollständige cache beim nächsten aktivieren verworfen wird.
+
+### behoben — KLEIN: textbug "wochesziel" statt "wochenziel" (`app/js/kompass.js`)
+- `${LEVEL_LABEL[nextLevel]}sziel` ergab bei `nextLevel === "week"` (`LEVEL_LABEL.week === "woche"`) fälschlich "wochesziel", sowohl im button-label als auch im toast nach dem vorschlagen.
+- **fix**: eigene kleine `LEVEL_GOAL_LABEL`-map (`{ month: "monatsziel", week: "wochenziel" }`) statt der fehleranfälligen konkatenation, an beiden stellen verwendet.
+
+### zusätzlich behoben (kleinere review-punkte, zeit war vorhanden)
+- `habits.js#render`: neu angelegte habits setzen jetzt explizit `goalId: null` (fehlte bisher komplett im `Habits.add({...})`-aufruf), analog zum defensiven `??=`-muster in `storage.js#load()`.
+- `kompass.js`: ziel-karten mit direkt verlinkten todos zeigen jetzt zusätzlich zur prozentzahl eine kurze text-entsprechung ("3 von 5 todos erledigt", ui_guidelines.md §5) — nur wo eine konkrete "von X"-größe existiert (blatt-ziele mit verlinkten todos); rein unterziel-basierte fortschritte zeigen weiterhin nur die prozentzahl (es gibt dort keine "von X"-größe).
+
+### getestet
+- lokal per `python3 -m http.server` + playwright/chromium:
+  - frischer zustand (`localStorage` komplett geleert) → setup-bildschirm ohne konsolenfehler → "erstmal lokal ausprobieren" geklickt → landet direkt im onboarding (kein cloud-projekt, kein login nötig), "später" im onboarding übersprungen → normale app, alle drei tabs (strom/kompass/verlauf) + einstellungen funktionsfähig, keine konsolenfehler.
+  - eine ältere notiz simuliert (`createdAt` direkt in den testdaten drei tage in die vergangenheit gesetzt) → über die neue "notizen & gedanken"-karte in "verlauf" im modal auffindbar (bestätigt: taucht in `notes.js`s liste auf, obwohl `strom.js`s "gerade einsortiert" sie nicht mehr zeigt).
+  - capture-feld befüllt ("zahnarzttermin für nächste woche ausmachen"), **ohne** abzusenden, seite neu geladen → text stand nach dem reload wieder im feld; nach dem absenden per enter blieb das feld beim nächsten reload korrekt leer (draft-key sauber gelöscht).
+  - "monatsziel vorschlagen lassen" auf einem jahresziel und danach "wochenziel vorschlagen lassen" auf dem monatsziel-entwurf → beide button-labels und beide toasts zeigen jetzt korrekt "monatsziel"/"wochenziel" statt "monatsziel"/"wochesziel".
+  - regressionscheck aller vorherigen kernflows (capture+klassifizieren, tag planen, .ics-export, kompass-bereichswechsel, habit-verknüpfung, verlauf-filter-pills, journal-/habits-modal, einstellungen inkl. cloud-sync-karte) — unverändert funktionsfähig, keine konsolenfehler außer dem bereits aus allen vorherigen iterationen bekannten, sandbox-bedingt blockierten `esm.sh`-zugriff (kein code-fehler).
+
+### noch offen
+- kein echter end-to-end-test mit einer echten cloud-anmeldung nach "erstmal lokal ausprobieren" (kein postfach in dieser umgebung verfügbar) — der spätere übergang von lokal zu cloud über die einstellungen ist code-seitig unverändert (bereits in der vorherigen iteration getestet), aber nicht erneut end-to-end mit einem echten magic-link verifiziert.
+- `native/` unverändert.
+
 ## [unveröffentlicht] — 2026-09-13 — "verlauf" gefüllt: zeitstrahl + abend-tagebuch + habits als modal (`app/`) — klärungsrunde damit vollständig umgesetzt
 
 nutzer-auftrag: teil 5 (letzter view) der klärungsrunde — `verlauf.js` (bisher nur ein platzhalter) zeigt jetzt einen echten, vertikalen zeitstrahl aus todos/habits/tagebuch, inkl. wiedererreichbarem tagebuch-eintrag und habit-abhaken (beide bisher nur über keinen tab mehr erreichbar) über modals (`architecture.md` §2.2, `context.md` §3.3/§3.7/§3.11). **damit ist das komplette, in der klärungsrunde neu gedachte konzept (strom/kompass/verlauf, login-gate, onboarding) jetzt vollständig in `app/` umgesetzt** — siehe die vorherigen drei einträge unten ("login-pflicht + onboarding-wizard", "neue navigation + 'strom'", "'kompass' gefüllt") für die anderen teile.

@@ -30,6 +30,17 @@ import { esc, toast, openModal, closeModal, ICONS } from "./ui.js";
 const REDUCED_IMPORTANT_COUNT = 3;
 const RECENT_CAPTURES_COUNT = 5;
 
+// auto-draft fürs capture-feld (review-befund, siehe CHANGELOG.md
+// "review-korrekturen"): ohne das ging bei reload/tab-wechsel/anruf
+// mitten im tippen der ganze text verloren — genau das gegenteil von
+// "sofort festhalten, bevor der gedanke weg ist" (context.md §1). bei
+// jedem tastendruck (debounced) landet der aktuelle inhalt hier, wird
+// beim render() wiederhergestellt und beim erfolgreichen absenden
+// wieder gelöscht.
+const CAPTURE_DRAFT_KEY = "mp-capture-draft";
+const CAPTURE_DRAFT_DEBOUNCE_MS = 300;
+let captureDraftTimer = null;
+
 const CATEGORY_LABEL = { todo: "todo", gedanke: "gedanke", gefühl: "gefühl" };
 const CATEGORY_ORDER = ["todo", "gedanke", "gefühl"];
 
@@ -268,7 +279,7 @@ export function render() {
     <p class="subtitle">${new Date().toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" })} · alles an einem ort — wird automatisch einsortiert</p>
 
     <div class="card" style="display:flex; gap:10px; align-items:center;">
-      <input type="text" id="capture-input" placeholder="was ist los? todo, gedanke oder gefühl — einfach reinschreiben" style="flex:1;">
+      <input type="text" id="capture-input" placeholder="was ist los? todo, gedanke oder gefühl — einfach reinschreiben" value="${esc(localStorage.getItem(CAPTURE_DRAFT_KEY) || "")}" style="flex:1;">
       <button class="btn-icon" id="capture-mic" title="diktieren (folgt mit ki-anbindung)">${ICONS.mic}</button>
       <button class="btn-icon" id="capture-add" title="hinzufügen" style="background:var(--accent); color:#fff; border:none;">${ICONS.plus}</button>
     </div>
@@ -318,6 +329,14 @@ export function render() {
   el.querySelector("#capture-add").addEventListener("click", addFromInput);
   el.querySelector("#capture-input").addEventListener("keydown", (e) => {
     if (e.key === "Enter") addFromInput();
+  });
+  el.querySelector("#capture-input").addEventListener("input", (e) => {
+    const value = e.target.value;
+    clearTimeout(captureDraftTimer);
+    captureDraftTimer = setTimeout(() => {
+      if (value.trim()) localStorage.setItem(CAPTURE_DRAFT_KEY, value);
+      else localStorage.removeItem(CAPTURE_DRAFT_KEY);
+    }, CAPTURE_DRAFT_DEBOUNCE_MS);
   });
   // mehrzeiliger paste: jede nicht-leere zeile wird einzeln erfasst und
   // eigenständig eingeordnet (1:1-mechanik aus today.js, nur pro zeile
@@ -381,6 +400,8 @@ export function render() {
     if (!text) return;
     captureOne(text);
     input.value = "";
+    clearTimeout(captureDraftTimer);
+    localStorage.removeItem(CAPTURE_DRAFT_KEY);
     render();
   }
 }
