@@ -76,6 +76,8 @@ a { color: var(--accent); }
   flex-shrink: 0;
 }
 
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
+
 .beta-pill {
   display: inline-flex;
   align-items: center;

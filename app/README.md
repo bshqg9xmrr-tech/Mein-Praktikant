@@ -31,14 +31,25 @@ seit dieser iteration verlangt die app **einmalig pro gerät** einen login, bevo
 
 einmal durchlaufen, bleibt die app **offline-first** wie zuvor — es gibt keinen wiederkehrenden netzwerk-zwang im alltäglichen gebrauch, nur dieser einmalige einstieg ist gated. das onboarding lässt sich jederzeit über **einstellungen → profil → "erneut durchlaufen"** erneut öffnen.
 
+## navigation (neu, `architecture.md` §2.2)
+
+die app hat seit dieser iteration nur noch **drei bereiche** statt der ursprünglichen sieben gleichrangigen tabs:
+
+1. **strom** (`js/strom.js`) — ersetzt inhaltlich `today.js` + `notes.js`: ein einziges erfassungsfeld, eine lokale heuristik sortiert todo/gedanke/gefühl ein (siehe unten), darunter eine auf 2–3 einträge reduzierte "jetzt wichtig"-liste.
+2. **kompass** (`js/kompass.js`) — ersetzt die bisherige "ziele"-ansicht. **aktuell nur ein minimaler platzhalter** (siehe "was bewusst noch nicht echt ist").
+3. **verlauf** (`js/verlauf.js`) — ersetzt übersicht + tagebuch-liste + habit-historie. **aktuell nur ein minimaler platzhalter** (siehe "was bewusst noch nicht echt ist").
+
+**einstellungen** ist kein eigener tab mehr, sondern über das zahnrad-icon oben rechts in der topbar erreichbar (neben dem beta-pill).
+
 ## was schon echt funktioniert
 
-- **todos**: einfache erfassung (nur titel, auch mehrzeilig per paste — jede zeile wird ein eigenes todo) → separate, einfache lokale planung (reihenfolge/dauer/pausen — deterministisch, **keine echte ki**, siehe unten) → export als echte `.ics`-kalenderdatei. löschen zeigt zuerst einen "rückgängig"-toast, bevor die aufgabe wirklich verschwindet; sind alle aufgaben des tages erledigt, erscheint eine kurze bestätigung.
-- **ziel-hierarchie mit echter ableitung** (der teil, der im ersten mockup fehlte): jahres-, quartals-, monats- und wochenziele lassen sich anlegen und an ein übergeordnetes ziel hängen. der fortschritt eines ziels berechnet sich automatisch aus seinen unterzielen, plus (neu) aus eigenen direkt verlinkten todos (erledigt-quote) und habits (konsistenz im zeitraum des ziels), gewichtet 1:1 — `app/js/goals.js#effectiveProgress()`. ein habit lässt sich (noch ohne eigene UI dafür, siehe unten) über `habit.goalId` mit einem ziel verknüpfen, analog zu `task.goalId`.
-- **tagebuch**: strukturierte felder, automatisch übernommene erledigte todos des tages, ein regelbasierter "rückblick" (keine ki)
-- **habits**: tägliches abhaken, echte streak-berechnung
-- **übersicht**: alle zahlen sind echte, aus den lokalen daten berechnete werte
-- **einstellungen**: bereiche verwalten, ziel-anzahl je woche/monat, planungs-defaults, daten-export/-import als JSON, beta-feedback-button (öffnet ein vorausgefülltes `mailto:`)
+- **strom**: ein einziges erfassungsfeld (auch mehrzeilig per paste — jede zeile wird einzeln erfasst) → eine **lokale, deterministische einordnungs-heuristik** (keine echte ki, siehe unten) schlägt "todo"/"gedanke"/"gefühl" vor → landet je nach kategorie als `Task` (heute) oder `Note` (gedanke bzw. gefühl, mit tag `"gefühl"`). eine "gerade einsortiert"-liste zeigt die letzten einträge mit einem klickbaren badge, über das sich die kategorie jederzeit korrigieren lässt (inkl. echter migration zwischen den collections).
+- **todos**: separate, einfache lokale planung (reihenfolge/dauer/pausen — deterministisch, **keine echte ki**, siehe unten) → export als echte `.ics`-kalenderdatei. löschen zeigt zuerst einen "rückgängig"-toast, bevor die aufgabe wirklich verschwindet; sind alle aufgaben des tages erledigt, erscheint eine kurze bestätigung. standardmäßig zeigt "jetzt wichtig" nur 2–3 offene todos, ein "N weitere anzeigen"-link blendet den rest ein.
+- **ziel-hierarchie mit echter ableitung** (der teil, der im ersten mockup fehlte): jahres-, quartals-, monats- und wochenziele lassen sich anlegen und an ein übergeordnetes ziel hängen. der fortschritt eines ziels berechnet sich automatisch aus seinen unterzielen, plus aus eigenen direkt verlinkten todos (erledigt-quote) und habits (konsistenz im zeitraum des ziels), gewichtet 1:1 — `app/js/goals.js#effectiveProgress()`. diese logik ist vollständig vorhanden, aber aktuell nur über die alte, nicht mehr per tab erreichbare `goals-view.js` bedienbar (wird zur grundlage für `kompass.js`, siehe "noch nicht echt").
+- **tagebuch**: strukturierte felder, automatisch übernommene erledigte todos des tages, ein regelbasierter "rückblick" (keine ki) — vorhanden in `journal.js`, aktuell nicht per tab erreichbar (wird zur grundlage für `verlauf.js`).
+- **habits**: tägliches abhaken, echte streak-berechnung — vorhanden in `habits.js`, aktuell nicht per tab erreichbar (wird zur grundlage für `verlauf.js`).
+- **übersicht**: alle zahlen sind echte, aus den lokalen daten berechnete werte — vorhanden in `overview.js`, aktuell nicht per tab erreichbar (wird zur grundlage für `verlauf.js`).
+- **einstellungen**: bereiche verwalten, ziel-anzahl je woche/monat, planungs-defaults, daten-export/-import als JSON, beta-feedback-button (öffnet ein vorausgefülltes `mailto:`) — erreichbar über das zahnrad-icon oben rechts.
 - daten liegen in `localStorage` (pro gerät); ein cloud-projekt (Supabase, siehe `CLOUD_SETUP.md`) ist jetzt für den login **vorausgesetzt** (siehe oben), synchronisiert danach denselben stand über mehrere geräte — `js/cloud.js`
 - **installierbar als PWA** (`manifest.json`, `sw.js`): "zum home-bildschirm hinzufügen" auf dem iphone, funktioniert danach auch offline
 
@@ -46,6 +57,8 @@ einmal durchlaufen, bleibt die app **offline-first** wie zuvor — es gibt keine
 
 diese version ersetzt keine ki — alle stellen, an denen später eine ki (siehe `architecture.md` §2.1/§4.3/§4.5, `memory.md`) andocken soll, sind klar beschriftet ("folgt mit ki-anbindung"):
 
+- **die einordnungs-heuristik in "strom" ist keine ki** — eine ganz simple, für jeden nachvollziehbare wortlisten-heuristik (fragezeichen/"vielleicht"/"idee" → gedanke; gefühlsbezogene wörter → gefühl; sonst todo), kein sprachmodell, kein lernen aus historie. im UI klar als "lokale einordnung · keine echte ki" beschriftet, jederzeit per klick auf das badge korrigierbar.
+- **`kompass.js` und `verlauf.js` sind aktuell nur minimale platzhalter** (je eine kurze "kommt als nächstes"-karte) — die eigentliche inhaltliche umsetzung folgt als zwei eigene, nächste schritte. die dafür nötige logik ist bereits vollständig vorhanden (`goals.js`/`goals-view.js` bzw. `overview.js`/`habits.js`/`journal.js`), aktuell aber von keinem tab mehr aus erreichbar.
 - keine echte diktier-/Wispr-Flow-anbindung (mikrofon-buttons sind hinweise, keine funktion)
 - die "einfache lokale planung" ist ein deterministischer algorithmus (reihenfolge = erfassungsreihenfolge, feste dauer, feste pausen), keine ki-schätzung
 - kein ki-coach im tagebuch, nur eine regelbasierte zusammenfassung

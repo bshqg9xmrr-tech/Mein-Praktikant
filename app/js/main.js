@@ -1,19 +1,21 @@
 // main.js — bootstrap + einfaches view-routing.
+// architecture.md §2.2: die navigation wurde von sieben gleichrangigen
+// tabs auf drei bereiche reduziert (strom/kompass/verlauf) — einstellungen
+// ist kein bottom-tab mehr, sondern über das zahnrad oben rechts erreichbar
+// (technisch bleibt es ein ganz normales "view", nur der einstiegspunkt
+// hat sich geändert, siehe index.html #settings-shortcut).
 
 import { load, onExternalChange } from "./storage.js";
 import * as cloud from "./cloud.js";
 import * as authGate from "./auth-gate.js";
-import * as today from "./today.js";
-import * as goals from "./goals-view.js";
-import * as notes from "./notes.js";
-import * as journal from "./journal.js";
-import * as habits from "./habits.js";
-import * as overview from "./overview.js";
+import * as strom from "./strom.js";
+import * as kompass from "./kompass.js";
+import * as verlauf from "./verlauf.js";
 import * as settings from "./settings.js";
 
-const views = { today, goals, notes, journal, habits, overview, settings };
+const views = { strom, kompass, verlauf, settings };
 const VIEW_STORAGE_KEY = "mein-praktikant-last-view";
-let currentView = "today";
+let currentView = "strom";
 
 function showView(name) {
   currentView = name;
@@ -38,13 +40,16 @@ function init() {
     btn.addEventListener("click", () => showView(btn.dataset.view));
   });
 
+  // einstellungen hat keinen eigenen bottom-tab mehr (nur noch strom/
+  // kompass/verlauf) — beide topbar-buttons führen dorthin.
   document.getElementById("feedback-shortcut").addEventListener("click", () => showView("settings"));
+  document.getElementById("settings-shortcut").addEventListener("click", () => showView("settings"));
 
   // wenn ein cloud-sync-pull daten von einem anderen gerät nachzieht,
   // die gerade sichtbare ansicht neu zeichnen.
   onExternalChange(() => views[currentView].render());
 
-  let start = "today";
+  let start = "strom";
   try {
     const remembered = sessionStorage.getItem(VIEW_STORAGE_KEY);
     if (remembered && views[remembered]) start = remembered;

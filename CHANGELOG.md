@@ -2,6 +2,44 @@
 
 alle nennenswerten iterationen dieses projekts werden hier protokolliert. format angelehnt an [keep a changelog](https://keepachangelog.com/), versionierung nach [semver](https://semver.org/) (solange `0.x.y`: alles kann sich noch ändern).
 
+## [unveröffentlicht] — 2026-09-13 — neue navigation + "strom" (`app/`)
+
+nutzer-auftrag: teil 3 der klärungsrunde (siehe eintrag weiter unten) — die neue 3-bereiche-navigation (strom/kompass/verlauf) ist jetzt tatsächlich in `app/` umgesetzt, und "strom" (ersetzt today.js + notes.js) ist der erste der drei bereiche, der wirklich fertig gebaut ist (`architecture.md` §2.2, `context.md` §3.1).
+
+### geändert — `app/index.html`, `app/styles.css`, `app/js/main.js`
+- die bottom-/sidebar-navigation hat jetzt **drei statt sieben tabs**: strom, kompass, verlauf. neue icons (pfeil-aus-klammer für strom, kompass-nadel für kompass, trend-linie für verlauf statt der bisherigen uhr).
+- **einstellungen ist kein eigener tab mehr** — erreichbar über ein neues zahnrad-icon oben rechts in der topbar, direkt neben dem bestehenden beta-pill (neue `.topbar-actions`-gruppe in `styles.css`). technisch bleibt es dasselbe `showView("settings")` wie vorher, nur der einstiegspunkt hat sich geändert.
+- `main.js`: `views` ist jetzt `{ strom, kompass, verlauf, settings }` statt der bisherigen sieben module. alte view-container (`#view-today`, `#view-goals`, `#view-notes`, `#view-journal`, `#view-habits`, `#view-overview`) sind durch `#view-strom`, `#view-kompass`, `#view-verlauf` ersetzt (`#view-settings` bleibt).
+
+### hinzugefügt — `app/js/strom.js` (neu, ersetzt inhaltlich `today.js` + `notes.js`)
+- **ein einziges erfassungsfeld**, danach läuft eine **lokale, deterministische einordnungs-heuristik** (ausdrücklich **keine echte ki** — architecture.md §2.1 beschreibt die geplante ki-schicht, die es hier noch nicht gibt) über den text und schlägt eine kategorie vor: enthält der text ein "?" oder wörter wie "vielleicht"/"idee"/"überlegen" → "gedanke"; enthält er gefühlsbezogene wörter ("genervt", "müde", "gestresst", "dankbar" u. ä.) → "gefühl"; alles andere → "todo" (default, wie bisher). die einordnung ist im UI klar als "lokale einordnung · keine echte ki" beschriftet (kleingedrucktes unter der liste + hinweistext im korrektur-dialog).
+- **"gerade einsortiert"-liste**: die letzten (bis zu 5) heute erfassten einträge mit einem klickbaren pill-badge ("→ todo"/"→ gedanke"/"→ gefühl"). klick öffnet einen kleinen auswahl-dialog, um die kategorie nachträglich zu korrigieren — inkl. echter **migration zwischen den collections** (todo ↔ notiz), nicht nur ein umbenanntes label.
+- **pragmatische entscheidung** (dokumentiert im code-kommentar): "gefühl"-einträge landen technisch als ganz normale `Note` mit dem zusätzlichen tag `"gefühl"` — ein eigenes append-log wäre hier unnötige komplexität, da `JournalEntry` auf einen strukturierten eintrag pro tag ausgelegt ist, kein lose collection von einzelnen gefühls-schnipseln.
+- **"jetzt wichtig"**: zeigt standardmäßig nur die obersten 2–3 offenen todos des tages (dieselbe sortierung wie bisher: geplante uhrzeit, sonst erfassungsreihenfolge), mit einem "N weitere anzeigen"-ghost-link, der die restliche liste (inkl. bereits erledigter todos) inline einblendet — kein separater screen.
+- alle bereits bestehenden, guten mechanismen aus `today.js` **1:1 übernommen**: rückgängig-toast beim löschen, mehrzeiliges paste (jede zeile wird jetzt zusätzlich einzeln klassifiziert statt immer ein todo zu werden), "alles erledigt"-banner, lokale tages-planung + echter `.ics`-kalender-export.
+- `notes.js` bleibt unverändert im repo bestehen (nicht gelöscht) — als notiz/gefühl eingeordnete strom-einträge landen weiterhin in derselben `Notes`-collection, bleiben also für spätere teile der app (z. b. volltextsuche) nutzbar, auch wenn `notes.js` selbst aktuell von keinem tab mehr aus erreichbar ist.
+
+### hinzugefügt — `app/js/kompass.js`, `app/js/verlauf.js` (neu, **bewusst nur minimale platzhalter**)
+- beide module exportieren nur ein `render()`, das eine kurze "kommt als nächstes"-karte im liquid-glass-stil zeigt, damit die neue 3-tab-navigation vollständig funktioniert, ohne `main.js` zu brechen.
+- **ausdrücklich noch keine inhaltliche umsetzung** — die bisherige, voll funktionierende logik dafür ist unverändert vorhanden und wird in den nächsten beiden schritten weiterverwendet: `goals.js`/`goals-view.js` (ziel-hierarchie, wird zu kompass), `overview.js`/`habits.js`/`journal.js` (dashboard/streaks/tagebuch, wird zu verlauf).
+
+### getestet
+- lokal per `python3 -m http.server` + playwright/chromium (login-gate via dokumentierten `window.__mpDebugSession`-test-hook übersprungen, cloud-projekt mit fiktiven, aber syntaktisch gültigen werten vorkonfiguriert, onboarding per "später" übersprungen — kein echtes postfach in dieser umgebung verfügbar, wie schon in den vorherigen iterationen):
+  - capture eines normalen satzes → landet korrekt als todo in "jetzt wichtig".
+  - capture von "vielleicht sollte ich mal … ausprobieren" → korrekt als "gedanke" eingeordnet; capture von "ich bin heute ziemlich gestresst" → korrekt als "gefühl" eingeordnet.
+  - klick auf ein badge → auswahl-dialog öffnet, kategorie lässt sich ändern, migration zwischen Tasks/Notes funktioniert (verifiziert: todo → gedanke, alter eintrag verschwindet aus Tasks, taucht als Note wieder auf).
+  - "jetzt wichtig" zeigt reduziert (3 von 4+ offenen todos), "N weitere anzeigen" blendet den rest (inkl. erledigter todos) ein, "weniger anzeigen" klappt wieder ein.
+  - mehrzeiliger paste (3 zeilen, gemischte kategorien) → alle drei zeilen einzeln erfasst und korrekt unterschiedlich eingeordnet, sammel-toast erscheint.
+  - rückgängig-toast beim löschen funktioniert unverändert (löschen → toast mit "rückgängig" → klick stellt die aufgabe wieder her).
+  - alle todos abhaken → "heute erledigt"-banner erscheint, expandierte liste zeigt alle (durchgestrichen).
+  - navigation zwischen allen drei neuen tabs + zahnrad → einstellungen funktioniert, sowohl mobile (bottom-tabbar) als auch desktop (sidebar, ≥900px) layout geprüft.
+  - **keine js-konsolenfehler** in allen obigen durchläufen (einzige beobachtete meldung: der bereits aus früheren iterationen bekannte, blockierte netzwerkzugriff auf `esm.sh` — eine reine sandbox-einschränkung dieser testumgebung, kein code-fehler).
+
+### noch offen / für die nächsten schritte
+- `kompass.js` und `verlauf.js` sind **nur platzhalter** — die eigentliche inhaltliche umsetzung (ziel-hierarchie mit ki-entwurf-vorschlägen bzw. gemeinsame zeitachse aus todos/habits/tagebuch/zielen) folgt als zwei eigene, nächste schritte.
+- `journal.js`, `habits.js`, `overview.js`, `goals-view.js` sind unverändert im repo, aber aktuell von keinem tab mehr erreichbar (werden in den nächsten schritten in `kompass.js`/`verlauf.js` aufgehen bzw. deren logik dorthin portiert).
+- keine neue datenmodell-änderung nötig für diesen schritt — die einordnungs-heuristik nutzt ausschließlich bereits bestehende felder (`Note.tags`).
+
 ## [unveröffentlicht] — 2026-09-13 — datenmodell: habits zählen jetzt auf ziele ein
 
 nutzer-auftrag: erster umsetzungsschritt der klärungsrunde (siehe eintrag unten) — teil 1 von mehreren, **nur** datenmodell + fortschritts-berechnung, bewusst noch keine UI-änderung (`architecture.md` §2.2/§4.1/§4.6, `context.md` §3.1/§3.5/§7.10).
