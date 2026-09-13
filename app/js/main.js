@@ -2,6 +2,7 @@
 
 import { load, onExternalChange } from "./storage.js";
 import * as cloud from "./cloud.js";
+import * as authGate from "./auth-gate.js";
 import * as today from "./today.js";
 import * as goals from "./goals-view.js";
 import * as notes from "./notes.js";
@@ -55,4 +56,8 @@ function init() {
   cloud.start().catch((e) => console.warn("cloud-sync-start fehlgeschlagen", e));
 }
 
-document.addEventListener("DOMContentLoaded", init);
+// architecture.md §2.2/§4.8: login (+ ggf. onboarding) ist jetzt ein
+// einmaliges, vorgeschaltetes gate — erst wenn es "durchgelassen" hat
+// (eingeloggt, onboarding erledigt bzw. übersprungen), startet die
+// eigentliche app. siehe auth-gate.js.
+document.addEventListener("DOMContentLoaded", () => authGate.start(init));

@@ -335,6 +335,52 @@ label.field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; 
 .done-banner .title { font-size: 13px; font-weight: 700; }
 .done-banner .meta { font-size: 11px; color: var(--text-soft); margin-top: 1px; }
 
+/* ---------- login/setup/onboarding gate (auth-gate.js, onboarding.js) ---------- */
+#gate-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 16px;
+}
+.gate-wrap {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.gate-header { text-align: center; margin-bottom: 2px; }
+.gate-header .mark {
+  width: 46px; height: 46px; border-radius: 14px;
+  background: linear-gradient(155deg, var(--accent), #7b88ff); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 15px; margin: 0 auto 14px;
+}
+.gate-header h1 { font-size: 19px; margin: 0 0 6px; letter-spacing: -0.2px; }
+.gate-header p { font-size: 12.5px; color: var(--text-soft); margin: 0; line-height: 1.55; }
+.gate-steps { display: flex; justify-content: center; gap: 6px; margin-bottom: 2px; }
+.gate-steps .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+.gate-steps .dot.active { background: var(--accent); }
+.gate-skip {
+  text-align: center; font-size: 12px; color: var(--text-faint); font-weight: 600;
+  cursor: pointer; text-decoration: underline; background: none; border: none; padding: 6px;
+}
+.gate-skip:hover { color: var(--text-soft); }
+
+.onboarding-area-row { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-top: 1px solid var(--border); }
+.onboarding-area-row:first-child { border-top: none; }
+.onboarding-area-row .dot { width: 9px; height: 9px; flex-shrink: 0; }
+.onboarding-area-row input[type="text"] { flex: 1; }
+
+.avatar-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.avatar-pick {
+  border: 2px solid transparent; border-radius: 16px; padding: 3px; background: transparent;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 0;
+}
+.avatar-pick svg { width: 100%; height: auto; }
+.avatar-pick.selected { border-color: var(--accent); }
+
 /* ---------- desktop layout ---------- */
 @media (min-width: 900px) {
   #app { flex-direction: row; }

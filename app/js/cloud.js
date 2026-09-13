@@ -109,6 +109,34 @@ export async function getCurrentEmail() {
   return data?.user?.email || null;
 }
 
+// liest die lokal gespeicherte session (kein netzwerk-roundtrip nötig,
+// solange sie nicht abgelaufen ist) — genutzt vom login-gate (auth-gate.js),
+// damit der allererste app-start nicht von einer netzwerk-antwort abhängt
+// (leitprinzip claude.md §3.1 / architecture.md §1: offline-first bleibt
+// nach dem einmaligen login erhalten).
+export async function getSession() {
+  const c = await getClient();
+  if (!c) return null;
+  try {
+    const { data } = await c.auth.getSession();
+    return data?.session || null;
+  } catch (e) {
+    console.warn("mein-praktikant: konnte cloud-session nicht lesen.", e);
+    return null;
+  }
+}
+
+// benachrichtigt cb(event, session) bei jeder auth-status-änderung (z. b.
+// wenn der magic-link im selben browser-tab die session setzt) — gibt eine
+// unsubscribe-funktion zurück. genutzt vom login-bildschirm im auth-gate,
+// damit man nach dem öffnen des links nicht manuell neu laden muss.
+export async function onAuthChange(cb) {
+  const c = await getClient();
+  if (!c) return () => {};
+  const { data } = c.auth.onAuthStateChange((event, session) => cb(event, session));
+  return () => data.subscription.unsubscribe();
+}
+
 async function pull() {
   const c = await getClient();
   if (!c) return;

@@ -91,6 +91,11 @@ function seedData() {
       calendarAutoExport: false,
       feedbackEmail: "feedback@example.com",
       theme: "light",
+      // architecture.md §4.12/§4.8: onboarding + avatar — es gibt (noch)
+      // kein echtes User-objekt im lokalen datenmodell, daher hier auf
+      // UserSettings-ebene abgelegt (am saubersten passend, siehe auth-gate.js).
+      avatarId: null,
+      onboardingCompletedAt: null,
     },
   };
 }
@@ -136,6 +141,8 @@ export function load() {
   // beim nächsten laden nicht brechen.
   db.habits.forEach((h) => (h.goalId ??= null));
   db.goals.forEach((g) => (g.origin ??= "user_defined"));
+  db.settings.avatarId ??= null;
+  db.settings.onboardingCompletedAt ??= null;
   save();
   return db;
 }

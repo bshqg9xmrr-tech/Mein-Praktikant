@@ -24,6 +24,31 @@ nutzer-auftrag: erster umsetzungsschritt der klärungsrunde (siehe eintrag unten
 ### nächste iteration
 - UI für die habit-ziel-verknüpfung (auswahlfeld analog zum bestehenden wochenziel-dropdown bei tasks), sichtbarkeit von `Goal.origin`/ki-vorschlags-badges — beides bewusst noch nicht teil dieses schritts.
 
+## [unveröffentlicht] — 2026-09-13 — login-pflicht + onboarding-wizard (`app/`)
+
+nutzer-auftrag: teil 2 der klärungsrunde (siehe eintrag unten) — login wird in `app/` jetzt pflicht (aber intelligent gestuft, kein sackgassen-zustand), gefolgt von einem kurzen, überspringbaren onboarding-wizard (`architecture.md` §2.2/§4.8/§4.12, `context.md` §3.10).
+
+### hinzugefügt — `app/js/auth-gate.js`, `app/js/onboarding.js`, `app/js/avatars.js`, `app/js/colors.js`, `app/js/areas-ui.js`
+- **login-gate** (`auth-gate.js`, neu): läuft in `main.js` vor dem eigentlichen app-start, unterscheidet vier zustände — (a) **kein supabase konfiguriert**: freundlicher setup-bildschirm mit kurzanleitung + den url/anon-key-feldern (kein unendlicher lade-spinner, kein sackgassen-zustand für einen ersten test ohne eingerichtetes supabase-projekt); (b) **konfiguriert, nicht angemeldet**: magic-link-login-bildschirm; (c) **angemeldet, onboarding offen**: der neue onboarding-wizard; (d) **angemeldet + onboarding fertig**: normale app, unverändert. `cloud.js` bekam dafür `getSession()` (liest nur die lokal gespeicherte session, kein netzwerk-roundtrip bei jedem start — damit das gate den alltäglichen, längst eingeloggten gebrauch nicht blockiert, siehe architecture.md §1 "ausnahme, neu entschieden") und `onAuthChange()` (springt automatisch weiter, sobald der magic-link im selben tab geöffnet wird, ohne manuellen reload).
+- **onboarding-wizard** (`onboarding.js`, neu): zwei kurze, jederzeit überspringbare schritte nach dem ersten login — (1) bereiche bestätigen/umbenennen/hinzufügen/entfernen, (2) einen von 8 abstrakten, geometrischen avataren wählen (`avatars.js`, neu — reine inline-svg-formen in den bestehenden bereichsfarben, ausdrücklich keine fotos/gesichter). jeder schritt hat einen "später"-link; abschluss **oder** überspringen setzt `settings.onboardingCompletedAt`, danach erscheint der wizard nicht mehr automatisch. über eine neue "profil"-karte in den einstellungen jederzeit erneut aufrufbar.
+- `storage.js`: `settings` bekommt zwei neue felder, `avatarId` und `onboardingCompletedAt` — es gibt (noch) kein echtes `User`-objekt im lokalen datenmodell, das war die naheliegendste stelle dafür (rückwärtskompatibel für bestehende lokale datenbestände ergänzt, wie schon bei `habit.goalId`/`goal.origin`).
+- `colors.js`/`areas-ui.js` (neu, ausgelagert aus `settings.js`): bereichsfarben-palette und "bereich hinzufügen/löschen/umbenennen"-logik sind jetzt geteilte module, damit `onboarding.js` sie mitnutzen kann, statt alles doppelt zu bauen — vermeidet zugleich einen zirkulären import zwischen `settings.js` und `onboarding.js` (beide importieren nur noch von den neuen, blattförmigen modulen).
+
+### geändert — `app/index.html`, `app/styles.css`, `app/js/main.js`, `app/js/settings.js`
+- neues `#gate-root`-element, `#app` startet mit `class="hidden"` (verhindert ein kurzes aufblitzen der leeren app-hülle, bevor das gate entschieden hat).
+- neue css-klassen fürs gate/onboarding (`.gate-wrap`, `.gate-header`, `.gate-steps`, `.avatar-grid`, `.avatar-pick`, …) — bestehende liquid-glass-bausteine (`.card`, `.btn-primary`, `.field`) wiederverwendet, keine neue design-sprache.
+- `main.js`: `init()` läuft jetzt hinter `authGate.start(init)` statt direkt bei `DOMContentLoaded`.
+- `settings.js`: neue "profil"-karte (avatar-vorschau + "erneut durchlaufen"), bereiche-verwaltung nutzt jetzt `areas-ui.js` statt einer eigenen kopie der gleichen logik.
+
+### getestet
+- lokal per `python3 -m http.server` + playwright/chromium, alle vier gate-zustände: (a) `localStorage` komplett leer, kein supabase konfiguriert → setup-bildschirm, null konsolenfehler; (b) `cloud.setConfig(...)` über die echte "speichern & weiter"-aktion mit einem fiktiven (aber syntaktisch gültigen) supabase-projekt → login-bildschirm erscheint korrekt (bleibt auch nach reload bestehen); (c) ein bewusst als test-hook dokumentierter `window.__mpDebugSession`-schalter in `auth-gate.js` simuliert den eingeloggt-zustand (kein echtes postfach in dieser umgebung verfügbar) → onboarding erscheint, bereich umbenennen + avatar wählen funktioniert, "fertig" führt in die app; "später" auf jedem der beiden schritte führt ebenfalls direkt in die app und setzt `onboardingCompletedAt`; (d) normale app dahinter unverändert nutzbar (heute-ansicht, einstellungen inkl. neuer profil-karte mit gewähltem avatar + umbenanntem bereich), "erneut durchlaufen" aus den einstellungen öffnet den wizard erneut und funktioniert.
+- einzige beobachtete konsolenfehler: ein blockierter netzwerkzugriff auf `esm.sh` (cdn-quelle von `@supabase/supabase-js`) — eine reine einschränkung der sandbox-testumgebung (egress-policy), nicht des codes; `cloud.js` fängt das bereits ab und fällt sauber auf den login-bildschirm zurück.
+
+### noch offen
+- kein echter end-to-end-test mit einer echten e-mail-adresse war in dieser umgebung möglich (kein postfach erreichbar) — fall (c) bleibt bis dahin über den dokumentierten test-hook simuliert, nicht über einen echten magic-link verifiziert.
+- weiterhin kein Auth0-ersatz (siehe `architecture.md` §4.8) — der supabase-magic-link-login bleibt der web-prototyp-zwischenstand.
+- `native/` unverändert.
+
 ## [unveröffentlicht] — 2026-09-13 — klärungsrunde: app-flow grundlegend neu gedacht
 
 nutzer-auftrag: "mir gefällt die architektur/grundstruktur und der workflow noch nicht — denk das nochmal mutig neu", gefolgt von einer visualisierung (mockup) und zwei brainstorming-runden zur konkretisierung. reine planungs-iteration, kein neuer code — `architecture.md`/`context.md` sind aktualisiert, umsetzung folgt als nächster schritt.

@@ -2,13 +2,14 @@
 // (kein platzhalter): bereiche, ziel-parameter, planungs-defaults,
 // beta-feedback (mailto), datenexport/-import.
 
-import { Areas, Goals, Tasks, getSettings, updateSettings, uid, resetAll, replaceAll } from "./storage.js";
-import { esc, toast, openModal, closeModal, ICONS } from "./ui.js";
+import { Areas, getSettings, updateSettings, resetAll, replaceAll } from "./storage.js";
+import { esc, toast, ICONS } from "./ui.js";
 import * as cloud from "./cloud.js";
+import { openAddAreaModal as openAddAreaModalShared, deleteArea as deleteAreaShared } from "./areas-ui.js";
+import { avatarSvg } from "./avatars.js";
+import * as onboarding from "./onboarding.js";
 
 let cloudListenerAttached = false;
-
-const AREA_COLOR_CHOICES = ["#f2895f", "#2fa8a0", "#8b6fe8", "#8891a8", "#5fb587", "#e0964f", "#c98bd8", "#4e9ee0"];
 
 function toggleHtml(id, on) {
   return `<button class="toggle ${on ? "on" : "off"}" data-toggle="${id}"><div class="knob"></div></button>`;
@@ -21,51 +22,6 @@ function stepper(id, value, min = 1, max = 9) {
       <span class="val">${value}</span>
       <button data-step="${id}" data-dir="1" ${value >= max ? "disabled" : ""}>+</button>
     </div>`;
-}
-
-function openAddAreaModal() {
-  const html = `
-    <h2>bereich hinzufügen</h2>
-    <label class="field">name<input type="text" id="area-name" placeholder="z. b. familie"></label>
-    <label class="field">farbe
-      <div class="chip-row">
-        ${AREA_COLOR_CHOICES.map((c, i) => `<button data-color="${c}" class="btn-icon" style="background:${c}; border:2px solid ${i === 0 ? "var(--text)" : "transparent"};"></button>`).join("")}
-      </div>
-    </label>
-    <div style="display:flex; gap:10px; margin-top:6px;">
-      <button class="btn btn-secondary btn-block" id="cancel">abbrechen</button>
-      <button class="btn btn-primary btn-block" id="save">hinzufügen</button>
-    </div>`;
-  let color = AREA_COLOR_CHOICES[0];
-  openModal(html, {
-    onMount: (root) => {
-      root.querySelectorAll("[data-color]").forEach((btn) =>
-        btn.addEventListener("click", () => {
-          color = btn.dataset.color;
-          root.querySelectorAll("[data-color]").forEach((b) => (b.style.border = "2px solid transparent"));
-          btn.style.border = "2px solid var(--text)";
-        })
-      );
-      root.querySelector("#cancel").addEventListener("click", closeModal);
-      root.querySelector("#save").addEventListener("click", () => {
-        const name = root.querySelector("#area-name").value.trim();
-        if (!name) return toast("bitte einen namen eintragen.");
-        Areas.add({ id: uid("area"), name, color, order: Areas.all().length });
-        closeModal();
-        render();
-      });
-    },
-  });
-}
-
-function deleteArea(id) {
-  const inUse = Goals.all().some((g) => g.areaId === id) || Tasks.all().some((t) => t.areaId === id);
-  if (inUse) {
-    toast("dieser bereich wird noch von zielen oder aufgaben genutzt — erst dort entfernen.");
-    return;
-  }
-  Areas.remove(id);
-  render();
 }
 
 function exportData() {
@@ -152,6 +108,15 @@ export function render() {
   el.innerHTML = `
     <h1>einstellungen</h1>
 
+    <div class="card" style="display:flex; align-items:center; gap:14px;">
+      <div style="width:48px; height:48px; flex-shrink:0;">${avatarSvg(s.avatarId)}</div>
+      <div style="flex:1;">
+        <div style="font-weight:700; font-size:13.5px;">profil</div>
+        <div style="font-size:11.5px; color:var(--text-soft); margin-top:2px;">avatar &amp; bereiche aus dem onboarding — jederzeit änderbar.</div>
+      </div>
+      <button class="btn-ghost" id="reopen-onboarding">erneut durchlaufen</button>
+    </div>
+
     <div class="card">
       <div class="section-label" style="margin-bottom:10px;">bereiche</div>
       ${areas
@@ -224,8 +189,9 @@ export function render() {
   el.querySelector("#feedback-link").href =
     `mailto:${s.feedbackEmail}?subject=${encodeURIComponent("Feedback: Mein Praktikant (Beta)")}&body=${encodeURIComponent("Hi,\n\nmir ist folgendes aufgefallen:\n\n")}`;
 
-  el.querySelector("#add-area").addEventListener("click", openAddAreaModal);
-  el.querySelectorAll("[data-del-area]").forEach((btn) => btn.addEventListener("click", () => deleteArea(btn.dataset.delArea)));
+  el.querySelector("#reopen-onboarding").addEventListener("click", () => onboarding.openStandalone(render));
+  el.querySelector("#add-area").addEventListener("click", () => openAddAreaModalShared(render));
+  el.querySelectorAll("[data-del-area]").forEach((btn) => btn.addEventListener("click", () => deleteAreaShared(btn.dataset.delArea, render)));
 
   el.querySelectorAll("[data-toggle]").forEach((btn) =>
     btn.addEventListener("click", () => {

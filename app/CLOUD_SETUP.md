@@ -1,10 +1,12 @@
 # cloud-sync einrichten (mac ⇄ iphone ⇄ web)
 
-ohne diese einrichtung läuft die app ganz normal weiter — nur eben pro gerät
-für sich (daten liegen dann nur lokal im browser, siehe `context.md` §7.9 /
-`architecture.md` §6). diese anleitung schaltet echten, kostenlosen
+**diese einrichtung ist inzwischen voraussetzung für die app** — der login
+ist pflicht, einmalig pro gerät (`architecture.md` §2.2/§4.8, `context.md`
+§3.10). ohne ein eingetragenes supabase-projekt zeigt die app beim start
+einen setup-hinweis statt der normalen ansicht. diese anleitung richtet
+genau dieses (kostenlose) projekt ein und schaltet zugleich echten
 cloud-sync über [supabase](https://supabase.com) frei, damit mac, iphone und
-web-browser dieselben daten sehen.
+web-browser danach dieselben daten sehen.
 
 dauer: ca. 5 minuten, einmalig.
 
@@ -70,8 +72,9 @@ im supabase-dashboard: **Project Settings → API**. dort zwei werte kopieren:
 > browser zu stehen. der schutz kommt über row-level-security (schritt 2),
 > nicht über geheimhaltung dieses keys.
 
-beide werte in der app unter **einstellungen → cloud-sync** eintragen und
-speichern.
+beide werte beim allerersten start der app auf dem setup-bildschirm
+eintragen (oder später jederzeit unter **einstellungen → cloud-sync**) und
+speichern — danach erscheint automatisch der login-bildschirm (schritt 5).
 
 ## 5. anmelden — auf jedem gerät
 
