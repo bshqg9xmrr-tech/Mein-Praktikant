@@ -22,6 +22,7 @@ kernproblem, das die app löst: **von der absicht zur tat** — adhs-typische sc
   - jede woche: **2 wochenziele**
   - jeder monat: **3 hauptziele**
   - alle unteren ebenen wirken auf projekte/jahresziele der bereiche ein
+- **neu gedacht in einer eigenen klärungsrunde nach v0.3.0** (siehe §7.10, `architecture.md` §2.2/§4.1): markus definiert nur das **jahresziel** je bereich selbst; monats- und wochen-hauptziele (+ deren unterziele) **entwirft die ki als vorschlag**, den er bestätigt/anpasst, statt jede ebene manuell anzulegen. **todos und habits sind zwei eigene, getrennte entitäten, zählen aber beide auf den fortschritt eines verknüpften ziels ein** (habits über ihre konsistenz, todos über ihre erledigt-quote) — löst den unterschied zwischen "dauerhafter praxis" (z. b. "krafttraining") und "datiertem ziel" (z. b. "halbmarathon vorbereiten"), ohne die entitäten zu vermischen.
 - transkript-upload oder direkte anbindung an wispr flow (diktate → strukturierte notizen/todos)
 - fortschritts-tracker: abstand zum ziel sichtbar machen
 - **zweistufiger todo-flow** (nutzer-feedback, iteration 2): (1) tagestodos werden zunächst über eine **ganz einfache eingabefunktion** erfasst (nur text, kein pflicht-feld für bereich/dauer/uhrzeit — schwelle für adhs-typisches "sofort festhalten" so niedrig wie möglich), (2) **erst danach** übernimmt die ki die einordnung (bereich, geschätzte dauer, reihenfolge, pausen) und erstellt daraus den tagesablauf — **automatischer export in den kalender** ist teil dieses zweiten schritts, kein separater manueller vorgang
@@ -45,6 +46,7 @@ kernproblem, das die app löst: **von der absicht zur tat** — adhs-typische sc
 
 ### 3.5 habits
 - eigener bereich für tägliche routinen (kalt duschen, meditieren, stretching, sport, kaffee, …) mit tracking/streaks
+- **neu (§7.10)**: ein habit kann optional mit einem ziel verknüpft werden (bleibt trotzdem eine eigenständige entität, kein teil des ziel-baums) — seine konsistenz zählt dann in den fortschritt des ziels ein, siehe §3.1.
 
 ### 3.6 weitere effizienz-hilfen (offen für vorschläge)
 - siehe `architecture.md` §7 für konkrete vorschläge (z. b. inbox/capture, wochenreview-automatik, admin-kram-batching)
@@ -61,10 +63,21 @@ kernproblem, das die app löst: **von der absicht zur tat** — adhs-typische sc
 - **feedback-möglichkeit direkt in der app**, mindestens für die beta-phase (nutzer-feedback, iteration 2) — sichtbar u. a. in den einstellungen (prominent) und als kleiner "beta"-hinweis auf den kernbildschirmen
 - technische umsetzung (e-mail-versand, formular an ein backend, oder ein einfaches ticket-system) ist noch offen — siehe offene fragen (`context.md` §7)
 
+### 3.10 login & onboarding (neu, §7.10)
+- die app öffnet sich **nicht ohne login** — anders als ursprünglich geplant (cloud/account als "reines extra"), ist ein login jetzt **pflicht, einmalig pro gerät**. grund: die app muss wissen, wessen daten das sind (u. a. für challenges, §3.11), nicht nur für optionalen backup-sync.
+- **passwortlos** (magic-link) — markus hatte zunächst klassisches mail+passwort vorgeschlagen, sich nach kurzer rückfrage aber bewusst dagegen entschieden: kein passwort zum merken/tippen passt besser zu adhs-freundlichkeit.
+- **einmaliges onboarding direkt nach dem ersten login**: (1) bereiche/projekte definieren (die vier bestehenden default-bereiche als vorschlag, frei anpassbar), (2) einen avatar wählen (feste illustrierte auswahl, kein foto-upload). bewusst kurz (2 schritte, überspringbar).
+
+### 3.11 gamification & challenges (neu, §7.10)
+- bleibt **bewusst leicht** — streaks (bereits vorhanden) sind der kern, **kein** xp-/level-system.
+- **ergänzt um 1:1-challenges**: eine einzelne, gemeinsame sache (ein habit oder ein ziel) zwischen zwei personen, per einladungslink — **kein** freundesystem, kein feed, kein globaler nutzer-katalog. beide sehen jeweils nur den fortschritt des anderen für genau diese eine challenge.
+- inspiration/referenz-check bei bestehenden apps (Coach.me, Goalify, Gola) — wichtigste übertragbare erkenntnis: **nicht jedes ziel passt in dieselbe form** (fortschritts-%, zähler, ja/nein, meilenstein/termin) — siehe `architecture.md` §2.2/§4.1 für die konkrete umsetzung im datenmodell.
+
 ## 4. plattform- & betriebsanforderungen
 
 - läuft **offline** als eigenständige app auf **macOS** und **iPhone** — **ausdrücklich bestätigt** (nutzer-feedback, iteration 2: "bitte sowohl für PC app, als auch Smartphone app umsetzen"), beide plattformen sind gleichrangig, keine ist "nebenbei" mitgedacht
 - daten sollen (auch) "in der cloud" gespeichert werden — **annahme, siehe §6**
+- **login ist pflicht, einmalig pro gerät** (§3.10, neu) — danach läuft die app wieder normal offline-first
 - rollen: **admin** sieht/darf alles, **user** sieht ausschließlich eigene daten
 - iterationen sollen **versioniert** werden (siehe `claude.md` §5 / `changelog.md`)
 
@@ -106,8 +119,16 @@ kernproblem, das die app löst: **von der absicht zur tat** — adhs-typische sc
 - welches konkrete open-source-modell für den Ollama-pfad (z. b. Llama 3.1 8B vs. Mistral 7B vs. Qwen2.5) — kann bei bedarf getestet/verglichen werden, sobald der ki-layer implementiert wird.
 - welches backend für den feedback-button (§7.7) — eigenes schlankes backend (z. b. kleine serverless-funktion + datenbank) ist geplant, konkrete technologie noch offen für `architecture.md`.
 
+10. **grundlegender app-flow/architektur** (nutzer-feedback, iteration 3: "gefällt mir noch nicht, bitte nochmal neu denken"): der ursprüngliche aufbau (sieben gleichrangige module) wurde mit markus in einer eigenen brainstorming-runde neu gedacht, mit mockups visualisiert und konkretisiert. ergebnis, alles bestätigt:
+    - **drei bereiche statt sieben**: "strom" (ein erfassungsfeld statt vorab-kategorisierung, ki sortiert im hintergrund), "kompass" (ziel-hierarchie, ki entwirft monats-/wochenebenen), "verlauf" (eine gemeinsame zeitachse statt getrennter dashboards) — siehe `architecture.md` §2.2 für die volle herleitung.
+    - **login wird pflicht, einmalig pro gerät, ausdrücklich passwortlos** (siehe §3.10) — markus wollte zunächst mail+passwort, hat sich nach rückfrage bewusst dagegen entschieden.
+    - **onboarding neu**: bereiche + avatar beim ersten login (§3.10).
+    - **goal-modell präzisiert**: todos und habits bleiben getrennte entitäten, beide zählen aber auf ein verknüpftes ziel ein (§3.1).
+    - **gamification bewusst leicht** (nur streaks) **+ 1:1-challenges** zwischen zwei personen, kein soziales netzwerk (§3.11).
+
 ## 8. aktueller stand
 
 - **iteration v0.2.0 — erster lauffähiger stand.** siehe `README.md`/`CHANGELOG.md`: ein web-prototyp (`app/`, im browser getestet) und ein Swift/SwiftUI-startpunkt (`native/`, nicht kompiliert — kein Xcode in dieser umgebung) existieren parallel.
-- **alle offenen fragen aus §7 sind jetzt beantwortet** (klärungsrunde nach v0.2.0). nativ (swift/SwiftUI) ist damit der bestätigte hauptweg — der web-prototyp bleibt als sofort nutzbarer zwischenstand bestehen, ist aber nicht mehr der langfristige zielpfad.
-- nächste iteration (`v0.3.0`) plant u. a. die ki-schicht (hybrid, §7.9) und den feedback-backend-anschluss (§7.7) — siehe `claude.md` §8.
+- **v0.3.0**: `app/` wurde installierbar (PWA) + mit optionalem cloud-sync (Supabase) versehen, um sofort auf dem handy testbar zu sein — siehe `CHANGELOG.md`.
+- **klärungsrunde iteration 3** (nach v0.3.0, siehe §7.10 oben): der app-flow wurde grundlegend neu gedacht (strom/kompass/verlauf), login/onboarding/goal-modell/gamification entsprechend präzisiert. `architecture.md` ist bereits aktualisiert. **noch nicht umgesetzt** — nächster schritt ist die implementierung dieses neuen konzepts (in `app/` und/oder `native/`, noch zu entscheiden).
+- nativ (swift/SwiftUI) bleibt der bestätigte langfristige hauptweg, der web-prototyp bleibt zwischenstand.

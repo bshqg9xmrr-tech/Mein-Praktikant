@@ -2,6 +2,24 @@
 
 alle nennenswerten iterationen dieses projekts werden hier protokolliert. format angelehnt an [keep a changelog](https://keepachangelog.com/), versionierung nach [semver](https://semver.org/) (solange `0.x.y`: alles kann sich noch ändern).
 
+## [unveröffentlicht] — 2026-09-13 — klärungsrunde: app-flow grundlegend neu gedacht
+
+nutzer-auftrag: "mir gefällt die architektur/grundstruktur und der workflow noch nicht — denk das nochmal mutig neu", gefolgt von einer visualisierung (mockup) und zwei brainstorming-runden zur konkretisierung. reine planungs-iteration, kein neuer code — `architecture.md`/`context.md` sind aktualisiert, umsetzung folgt als nächster schritt.
+
+### geändert — `architecture.md`, `context.md`
+- **app-flow neu gedacht**: statt sieben gleichrangiger module (heute/ziele/notizen/tagebuch/habits/übersicht/einstellungen) jetzt **drei bereiche**: "strom" (ein erfassungsfeld statt vorab-kategorisierung — die ki sortiert todo/gedanke/gefühl im hintergrund), "kompass" (ziel-hierarchie, ki entwirft monats-/wochen-hauptziele als vorschlag statt manuellem anlegen jeder ebene), "verlauf" (eine gemeinsame zeitachse für ziele, habits und stimmung statt getrennter dashboards). siehe `architecture.md` §2.2.
+- **goal-modell präzisiert**: todos und habits bleiben zwei eigene entitäten (kein umbau zu "praktiken"-knoten im ziel-baum), bekommen aber beide eine optionale ziel-verknüpfung und zählen gemeinsam in dessen fortschritt ein — habits über konsistenz, todos über erledigt-quote (`architecture.md` §4.1/§4.6).
+- **login wird pflicht**, einmalig pro gerät, **ausdrücklich passwortlos** (magic-link) — nutzer hatte zunächst klassisches mail+passwort vorgeschlagen, sich nach rückfrage bewusst dagegen entschieden (`architecture.md` §4.8).
+- **onboarding neu**: bereiche/projekte + avatar-auswahl beim ersten login (`architecture.md` §4.12).
+- **gamification bewusst leicht** (nur streaks, kein xp/level) **+ 1:1-challenges** zwischen zwei per einladungslink verbundenen personen, kein soziales netzwerk/freundesystem (`architecture.md` §4.13) — inspiriert von einem kurzen vergleich mit Coach.me, Goalify und Gola (übertragbarste erkenntnis: nicht jedes ziel passt in dieselbe form/fortschrittsanzeige).
+- datenmodell (`architecture.md` §5) um `User.avatar_id`/`onboarding_completed_at`, `Goal.origin`, `Habit.goal_id` und eine neue `Challenge`-entität ergänzt.
+
+### visualisierung
+- drei mockup-screens (strom/kompass/verlauf) als klickbares konzept-mockup erstellt, um die neue struktur greifbar zu machen, bevor sie in den code geht.
+
+### nächste iteration
+- `v0.4.0` (vorschlag): das neu gedachte konzept tatsächlich in `app/` (und/oder `native/`) umsetzen.
+
 ## [unveröffentlicht] — 2026-09-10 — heute-ansicht: weniger reibung bei erfassen & löschen
 
 nutzer-auftrag (über einen feedbackgeber-agenten geprüft und priorisiert): drei kleine reibungspunkte in der heute-ansicht (`app/js/today.js`) beheben.

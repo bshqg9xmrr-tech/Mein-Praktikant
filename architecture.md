@@ -4,7 +4,7 @@
 
 ## 1. leitprinzipien
 
-1. **offline-first**: alle kernfunktionen (todos, ziele, notizen, tagebuch, habits) funktionieren vollständig ohne internet. cloud-sync ist ein zusatz, kein voraussetzung.
+1. **offline-first**: alle kernfunktionen (todos, ziele, notizen, tagebuch, habits) funktionieren vollständig ohne internet. cloud-sync ist ein zusatz, kein voraussetzung. **ausnahme, neu entschieden (§2.2)**: ein login (passwortlos, siehe §4.8) ist einmalig pro gerät nötig, um zu wissen, wessen daten das sind, und weil challenges (§4.13) echte konten brauchen — danach läuft die app wieder normal offline, sync bleibt opportunistisch.
 2. **adhs-freundlich statt feature-reich**: jede funktion muss reibung senken, nicht erhöhen. lieber ein guter default als zehn einstellungen.
 3. **ein datenmodell, zwei clients**: macOS und iPhone teilen sich code und datenmodell — keine parallel gepflegten apps.
 4. **privacy by design**: nutzerdaten (v. a. tagebuch) sind sensibel. lokal verschlüsselt, cloud-versand nur transparent und zweckgebunden (siehe `memory.md` §4).
@@ -46,6 +46,22 @@ mein-praktikant/
 └── docs/                  # dieses dokumentenset
 ```
 
+### 2.2 neu gedachter app-flow (klärungsrunde nach v0.3.0)
+
+**auslöser**: markus fand den ursprünglichen aufbau ("sieben gleichrangige module: heute/ziele/notizen/tagebuch/habits/übersicht/einstellungen") nicht überzeugend — zu viele getrennte schubladen, in die man beim erfassen selbst einsortieren muss. in einer eigenen brainstorming-runde neu gedacht, mit mockups visualisiert (siehe artefakt-link im chat-verlauf dieser session) und mit markus konkretisiert. **dieser abschnitt ist der verbindliche stand**, §4.1/§4.6/§4.8/§5 unten sind entsprechend angepasst.
+
+**kern-metapher**: drei bereiche statt sieben.
+
+1. **strom** (ersetzt heute + notizen + teile von tagebuch) — ein einziges erfassungsfeld (text oder diktat), keine pflicht-vorab-entscheidung ("ist das ein todo/gedanke/gefühl?"). die ki sortiert asynchron im hintergrund, nutzer korrigiert bei bedarf nachträglich. darunter eine auf das wichtigste reduzierte tages-sicht statt der vollen todo-liste (mit "mehr anzeigen"-option — keine erzwungene radikale reduktion, nur ein sinnvoller default).
+2. **kompass** (ersetzt "ziele") — die ziel-hierarchie bleibt strukturell **jahr → monat (hauptziel) → woche (hauptziel) → unterziele** (siehe §4.1, unverändert in der grundform), aber die ki entwirft die ebenen unter dem jahresziel als vorschlag, den markus bestätigt/anpasst, statt dass er jede ebene manuell von hand anlegt. **wichtig, nach rückfrage geklärt**: habits und todos bleiben zwei eigene, getrennte entitäten (kein umbau zu "praktiken"-knoten im ziel-baum) — beide bekommen aber eine verknüpfung zu einem ziel und zählen gemeinsam in dessen fortschritt ein (details §4.1).
+3. **verlauf** (ersetzt übersicht + tagebuch-liste + habit-historie) — eine gemeinsame zeitachse statt getrennter dashboards: erledigte todos, habit-konsistenz, tagebuch-stimmung und ziel-fortschritt auf einem zeitstrahl, mit von der ki hervorgehobenen zusammenhängen ("seit 3 tagen weniger sport, und dein wochenziel steht still — zusammenhang?").
+
+**onboarding** (neu, einmalig beim ersten login, bestätigt): bereiche/projekte definieren + einen avatar wählen, bevor der "strom" losgeht. siehe §4.12.
+
+**login wird pflicht** (bestätigt, siehe §4.8): passwortlos (magic-link — **ausdrücklich kein passwort**, adhs-freundlichkeit hat vorrang vor der ursprünglichen idee eines klassischen passwort-logins), einmalig pro gerät, danach normaler offline-first-betrieb.
+
+**gamification** (bestätigt): bewusst **leicht** gehalten — streaks bleiben der kern (kein xp/level-system) — ergänzt um **1:1-challenges** mit einer einzelnen eingeladenen person (details §4.13). ausdrücklich **kein** freundesystem, keine feeds, kein globaler nutzer-katalog.
+
 ## 3. schichtenarchitektur
 
 ```
@@ -70,6 +86,8 @@ domain-schicht kennt keine SwiftUI- oder integrations-details → gut testbar, a
 - ziel-hierarchie als **eine entität `goal`** mit `level` (year/quarter/month/week/day) und `parent_id` (rekursiv) statt fünf separater tabellen — reduziert komplexität, erlaubt beliebige zwischenebenen später.
 - wochenziel-limit (2) und monatsziel-limit (3) sind **weiche validierung** in der domain-schicht (warnung, kein hard-block — adhs-realität: manchmal braucht es ausnahmen).
 - `task` referenziert optional ein `goal` (wirkt darauf ein) und einen `area` (bereich).
+- **ki entwirft ebenen unter dem jahresziel** (§2.2, neu): markus definiert nur das jahresziel je bereich manuell; `BreakdownGoalUseCase` schlägt monats- und wochen-hauptziele + deren unterziele als entwurf vor (badge "ki-entwurf" bzw. "ki-vorschlag · offen"), markus bestätigt oder ändert — kein manuelles anlegen jeder einzelnen ebene mehr nötig.
+- **todos UND habits zählen auf ziele ein** (§2.2, nach rückfrage bei markus bestätigt — löst die spannung zwischen "dauerhafte praktik" und "datiertes ziel" ohne die entitäten zu vermischen): `habit` bekommt zusätzlich zu `task` ein optionales `goal_id`-feld (siehe §4.6, §5). `effectiveProgress(goal)` (bisher: rekursiver durchschnitt der unterziele bzw. anteil erledigter, verlinkter tasks) wird erweitert um eine zweite komponente für verlinkte habits: deren konsistenz (anteil erfüllter `habit_log`-einträge) im betrachtungszeitraum des ziels. bei einem ziel mit sowohl verlinkten tasks als auch verlinkten habits ergibt sich der fortschritt aus einem gewichteten mittel beider anteile (gewichtung konfigurierbar, default 1:1) — bei einem blatt-ziel ohne unterziele bleiben tasks/habits weiterhin die alleinige datengrundlage, bei einem ziel mit unterzielen fließen dessen eigene direkt verlinkten tasks/habits **zusätzlich** zum durchschnitt der unterziele ein, nicht anstelle davon.
 - **zweistufiger flow** (nutzer-feedback, mockup-iteration 2 — siehe entwürfe "Capture" / "TodayDesktop"): task-erfassung und ki-planung sind bewusst **entkoppelt**:
   1. **CaptureUseCase**: legt einen `task` mit nur `title` an — `area`, `estimated_minutes`, `scheduled_at` bleiben zunächst leer/`null`. keine pflichtfelder, kein modal, keine kategorisierung nötig (niedrigste mögliche erfassungsschwelle).
   2. **PlanDayUseCase**: läuft explizit (nutzer tippt "ki plant meinen tag") oder automatisch zur morgen-erinnerung — reichert alle noch nicht eingeplanten tasks des tages an (bereich-erkennung, effort estimation, reihenfolge, pausen) und schreibt `scheduled_at` + `estimated_minutes`.
@@ -98,13 +116,15 @@ domain-schicht kennt keine SwiftUI- oder integrations-details → gut testbar, a
 ### 4.6 habits
 - `habit` (name, ziel-frequenz, bereich optional) + `habit_log` (datum, erledigt/wert).
 - streak-berechnung rein lokal, kein server nötig.
+- **neu (§2.2)**: `habit` bekommt ein optionales `goal_id` — verknüpft eine dauerhafte praktik mit einem ziel (z. b. "krafttraining" mit dem jahresziel "bewegung & sportliche identität"), ohne dass der habit selbst teil des ziel-baums wird. die konsistenz des habits fließt in `effectiveProgress()` des verknüpften ziels ein (siehe §4.1). bleibt weiterhin eine eigenständige, vom ziel unabhängig nutzbare entität — die verknüpfung ist rein optional.
 
 ### 4.7 ki-assistent ("frage überall")
 - global erreichbar (z. b. persistenter such-/frage-button).
 - siehe `memory.md` für retrieval-architektur.
 
 ### 4.8 auth & billing
-- **Auth0**: login (macOS: system-browser-flow via ASWebAuthenticationSession; iOS: gleiches sdk). liefert `user_id` (`sub`) als stabilen fremdschlüssel für alle daten.
+- **login wird pflicht, einmalig pro gerät** (§2.2, bestätigt) — ohne login kein zugriff auf die app. **ausdrücklich passwortlos** (magic-link): markus hatte zunächst klassisches "mail + passwort" vorgeschlagen, sich nach rückfrage aber bewusst für passwortlos entschieden (kein passwort zum merken/tippen — adhs-typischer reibungspunkt). grund für den login-zwang: die app muss wissen, wessen daten das sind (für challenges, §4.13, und für den cloud-sync), nicht länger eine reine "cloud ist optionales extra"-haltung wie in der ursprünglichen v1-planung. nach dem login läuft die app wieder normal offline-first weiter (leitprinzip §1).
+- **Auth0**: geplanter finaler login-anbieter (macOS: system-browser-flow via ASWebAuthenticationSession; iOS: gleiches sdk), unterstützt passwortlose flows nativ. liefert `user_id` (`sub`) als stabilen fremdschlüssel für alle daten. **zwischenstand im web-prototyp**: supabase-magic-link (`app/js/cloud.js`) erfüllt bereits "passwortlos, pflicht-login" funktional, ist aber kein Auth0-ersatz (siehe `CHANGELOG.md`).
 - **rollenmodell**: `role` enum (`admin` | `user`) im user-profil, serverseitig geprüft sobald ein server existiert (supabase RLS), lokal clientseitig durch scoping aller queries auf `current_user_id` (admin-modus hebt das scoping für admin-uis explizit auf).
 - **Stripe**: abo-status am user-profil (`subscription_status`), zahlungsfluss läuft über Stripe Checkout/Billing Portal (webview/system-browser) — keine kartendaten im client.
 
@@ -121,25 +141,42 @@ domain-schicht kennt keine SwiftUI- oder integrations-details → gut testbar, a
 - einfacher feedback-mechanismus, **mindestens für die beta-phase** (nutzer-feedback, mockup-iteration 2) — sichtbar als kleiner hinweis auf den kernbildschirmen und prominent in den einstellungen.
 - **entschieden** (`context.md` §7.7): anbindung an ein **eigenes backend**, kein reiner `mailto:`-flow. `FeedbackClient` sendet `FeedbackReport` (siehe datenmodell §5) an einen schlanken eigenen endpoint (z. b. eine kleine serverless-funktion + tabelle — konkrete technologie noch offen, siehe `context.md` §7 "noch offen"). der web-prototyp (`app/`) behält vorerst den einfacheren `mailto:`-fallback, bis das backend existiert.
 
+### 4.12 onboarding (neu, §2.2)
+- läuft **einmalig** direkt nach dem ersten login, bevor der "strom" (§2.2) zum ersten mal erscheint.
+- schritt 1: **bereiche/projekte definieren** — die schon bestehenden vier default-bereiche (privat/plenum/tecis/sonstige) werden als vorschlag gezeigt, frei umbenennbar/erweiterbar/löschbar, statt sie erst später in den einstellungen zu suchen.
+- schritt 2: **avatar wählen** — eine kleine, feste auswahl an illustrierten avataren (kein foto-upload, kein zwang zu einer echten identität), erscheint u. a. bei challenges (§4.13) und im verlauf.
+- bewusst **kurz gehalten** (2 schritte, überspringbar) — passt zu leitprinzip §1.2 ("reibung senken, nicht erhöhen"), kein mehrseitiger fragebogen.
+
+### 4.13 challenges (neu, §2.2)
+- **bewusst klein gehalten** — keine soziale plattform, kein freundesystem, kein feed, kein globaler nutzer-katalog. genau **eine gemeinsame sache zwischen zwei personen**.
+- eine `challenge` verknüpft entweder einen `habit` oder ein `goal` mit einer zweiten eingeladenen person (`invitee_user_id`, per einladungslink/-code, keine bestehende "freundschaft" nötig), plus zeitraum (`start_date`, `end_date`) und status (`pending` | `active` | `completed` | `declined`).
+- beide teilnehmer:innen sehen **ausschließlich** den streak/fortschritt des jeweils anderen für **genau diese eine challenge** — kein einblick in sonstige daten der anderen person.
+- technisch **auf der bereits bestehenden supabase-cloud-sync-basis** (`app/js/cloud.js`, echte accounts existieren dort schon über magic-link) umsetzbar, kein Auth0/Stripe-vorzug nötig, keine eigene neue backend-infrastruktur.
+- einladungsannahme setzt voraus, dass die eingeladene person selbst einen (passwortlosen) account hat — kein anonymes "gast"-mitspielen.
+
 ## 5. datenmodell (kernentitäten, skizze)
 
 > **umsetzungshinweis (v0.2.0)**: in der ersten lauffähigen umsetzung (`app/`, `native/`) wurde die goal-`level` `day` bewusst weggelassen — tasks übernehmen die tagesebene direkt über `goal_id` (meist auf ein wochenziel). deckt "tagesebene wirkt auf wochenziel ein" ab, ohne ein zusätzliches, praktisch leeres modell zu brauchen. siehe `app/README.md`/`native/README.md`.
 
 ```
-User          { id, auth0_sub, email, role, subscription_status, created_at }
+User          { id, auth0_sub, email, avatar_id, role, subscription_status,
+                onboarding_completed_at?, created_at }
 Area          { id, user_id, name, color, sort_order }
 Goal          { id, user_id, area_id, level(year|quarter|month|week|day),
-                parent_goal_id?, title, target_date, status, progress }
+                parent_goal_id?, title, target_date, status, progress,
+                origin(user_defined|ai_proposed|user_confirmed) }
 Task          { id, user_id, area_id, goal_id?, title, notes,
                 due_date, scheduled_at?, estimated_minutes, actual_minutes?,
                 status(open|done|skipped), calendar_event_id? }
 Note          { id, user_id, title, body, tags[], created_at }
 JournalEntry  { id, user_id, date, gratitude[3], events, thoughts, feelings,
                 raw_text?, coach_feedback? }
-Habit         { id, user_id, area_id?, name, frequency, target_value? }
+Habit         { id, user_id, area_id?, goal_id?, name, frequency, target_value? }
 HabitLog      { id, habit_id, date, value, done }
 Transcript    { id, user_id, source(manual|wispr_flow), raw_text,
                 processed_at?, linked_task_ids[], linked_note_id? }
+Challenge     { id, owner_user_id, invitee_user_id?, type(habit|goal), ref_id,
+                start_date, end_date, status(pending|active|completed|declined) }
 UserSettings  { user_id, weekly_goal_count, monthly_goal_count, week_start(mon|sun),
                 morning_reminder_time?, evening_reminder_time?,
                 calendar_auto_export, default_break_minutes,
@@ -147,7 +184,9 @@ UserSettings  { user_id, weekly_goal_count, monthly_goal_count, week_start(mon|s
 FeedbackReport{ id, user_id, message, context?, created_at }
 ```
 
-alle entitäten: `user_id`-scoped (außer admin-abfragen), `updated_at` für sync-konfliktauflösung.
+`User.avatar_id`, `User.onboarding_completed_at`, `Goal.origin`, `Habit.goal_id` und die neue `Challenge`-entität sind neu aus der klärungsrunde §2.2 — siehe dort sowie §4.1/§4.6/§4.12/§4.13 für die begründung.
+
+alle entitäten: `user_id`-scoped (außer admin-abfragen und `Challenge.invitee_user_id`, die absichtlich einer zweiten person gehört), `updated_at` für sync-konfliktauflösung.
 
 ## 6. sync- & speicherstrategie
 
