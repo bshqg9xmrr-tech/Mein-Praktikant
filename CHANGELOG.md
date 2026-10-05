@@ -2,6 +2,28 @@
 
 alle nennenswerten iterationen dieses projekts werden hier protokolliert. format angelehnt an [keep a changelog](https://keepachangelog.com/), versionierung nach [semver](https://semver.org/) (solange `0.x.y`: alles kann sich noch ändern).
 
+## [0.5.0] — 2026-10-05 — mvp v2 "tages-assistent" (`mvp/`, neu)
+
+nutzer-auftrag: die routines "⚡ jarvis – morning briefing (mo–fr 8:00)" und "pepper – abend-check-in (täglich 19:30)" auslesen, daraus ableiten, was die app funktional können soll (ohne immobilien), und einen komplett neuen mvp bauen: aufgaben über verbindungen (WhatsApp, WhatsApp Business, mail, Teams) und diktat aufnehmen, nach persönlichen vorlieben strukturieren, für neurodivergente menschen in den kalender einplanen (erholungs-, fokus-, arbeitszeiten, private/geschäftliche termine, kreativ-/abarbeit-zeiten, wetter), abends todos + habits abfragen und die einzahlung auf die jahresziele zeigen.
+
+### neu — dokumentation
+- `anforderungen-v2.md`: quellen-tabelle (was die routines heute machen → übernommen ja/nein), funktionale anforderungen f1–f5, nicht-funktionale anforderungen, bewusste grenzen des mvp.
+
+### neu — prototyp `mvp/` (eigener ordner, eigener speicher `mp2-db-v1`, PWA)
+- **eingang**: diktat (Web Speech API, fallback-hinweis auf macOS-diktat), notiz/brain-dump wird in einzelne punkte zerlegt, nachrichten einfügen mit quelle, datei-importe: WhatsApp-chat-export (iOS + android, erkennt unbeantwortete nachrichten der letzten 7 tage), `.eml` (inkl. multipart/quoted-printable, newsletter-erkennung), `.ics`. regelbasierte einordnung: 🔴/🟡/⚪/🟢, art (todo/terminanfrage/admin/wartet auf/idee/info), privat/geschäftlich, energie-typ, dauer, fälligkeit, uhrzeit; jede einordnung mit "eingeordnet weil". antwort-vorlagen (du/Sie automatisch) mit 2 freien slots aus dem kalender, admin-autopilot (betrag, IBAN, verwendungszweck, link). share-target im manifest (android/chrome).
+- **heute**: hauptfokus = wichtigste "echte" aufgabe mit slot, inkl. kleinem ersten schritt; planer mit energie-profil pro stunde, kernzeit-regel (geschäftlich rein, privat raus), puffer um termine, mittagspause, pause nach fokus-blöcken, teil-blöcke für lange aufgaben, kleinkram-bündelung (≤ 20 min je kontext zu einem block), max. n haupt-slots, "falls noch zeit", wochentags-themen, sportziel-slot wetter-abhängig (Open-Meteo), wetter-hinweis für die mittagspause, übernahme von gestern ("2× verschoben"), offene loops mit "seit x tagen", `.ics`-export und -import, termine manuell.
+- **abend**: geplante aufgaben ✓/↪/✕, neues erfassen, habits ja/teils/nein, 4 stimmungen, "wie hat der plan gepasst?" (passt max. slots für morgen an), zusammenfassung ohne vorwurf, vormerkung für morgen, einzahlung pro jahresziel (vorher → nachher am selben stichtag, ein tag ohne beitrag ist nie ein rückschritt), habit-tracker-zeile im format der pepper-routine, blick auf morgen. erinnerung zur check-in-uhrzeit (banner + optional systemmitteilung bei offener app).
+- **ziele**: jahresziele mit zielwert ("wie viele erledigte aufgaben ≈ ziel erreicht?"), habits mit x/woche, ziel-zuordnung, sport-habit, wochenpunkte, streak.
+- **profil**: alle vorlieben antippbar, energie-raster 6–21 uhr mit 3 vorlagen, verbindungs-übersicht (ehrlich: import statt live), backup export/import, beispieldaten laden/löschen.
+- **onboarding**: 5 schritte (name, arbeitszeit, energie-typ, habits, jahresziele) oder direkt mit beispieldaten.
+- **deploy**: `pages.yml` baut jetzt `app/` an die wurzel und `mvp/` nach `/mvp/`.
+
+### bewusst nicht enthalten
+- live-anbindung an postfächer/chats (braucht backend bzw. native app), echte ki, meeting-vorbereitung, geburtstage, sonntags-reset, freundes-radar, investment-updates. immobilien: kein teil der app.
+
+### getestet
+- node-checks für einordnung, importer und planer; Playwright-durchläufe (beispieldaten morgens und abends, eigenes onboarding, dark mode, desktop-breite, WhatsApp-import, wetter mit gemockter Open-Meteo-antwort) ohne konsolen- oder seitenfehler. dabei gefunden und behoben: zu viele 15-min-aufgaben verdrängten die große aufgabe (→ bündelung), "08.10." wurde als uhrzeit gelesen, "rwe" traf in "verwendungszweck", info-nachrichten wurden als terminanfrage erkannt, ziel-fortschritt sprang mit 3 aufgaben auf 100 % (→ zielwert), onboarding-zielfelder wurden nicht gerendert.
+
 ## [unveröffentlicht] — 2026-09-13 — review-korrekturen: login-ausweg, notizen wieder auffindbar, capture-draft, sw.js-precache, textbug (`app/`)
 
 nutzer-auftrag: zwei unabhängige review-agenten (feedbackgeber + tester-adhs) haben das komplette, in der klärungsrunde neu umgesetzte konzept (login-gate/onboarding/strom/kompass/verlauf) geprüft. sechs befunde behoben, priorisiert nach schweregrad.
