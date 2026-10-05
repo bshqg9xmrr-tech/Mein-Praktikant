@@ -7,6 +7,7 @@ on:
       - claude/adhs-structure-app-vy33c3
     paths:
       - "app/**"
+      - "mvp/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch: {}
 
@@ -31,10 +32,18 @@ jobs:
         uses: actions/configure-pages@v5
         with:
           enablement: true
+      # v0.4-beta bleibt unter der haupt-adresse, der neue mvp v2 liegt
+      # daneben unter /mvp/ — so lassen sich beide vergleichen
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp -R app/. _site/
+          mkdir -p _site/mvp
+          cp -R mvp/. _site/mvp/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "app"
+          path: "_site"
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

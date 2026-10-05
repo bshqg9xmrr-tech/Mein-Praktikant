@@ -45,6 +45,8 @@ reihenfolge zum einlesen bei neuen sessions: **context → architecture → memo
 - **review-durchlauf** (feedbackgeber + tester-adhs, auf ausdrücklichen nutzer-wunsch) fand diesen blocker sowie eine notizen-auffindbarkeits-lücke und fehlenden capture-draft-schutz — alle behoben, siehe `CHANGELOG.md`.
 - `app/` ist damit erstmals als **installierbare beta** gedacht (PWA, auf dem eigenen mac über safari/chrome "zum dock hinzufügen"/"app installieren" nutzbar) — nicht mehr nur entwicklungs-zwischenstand.
 
+**iteration v0.5.0 — mvp v2 "tages-assistent" (`mvp/`).** markus hat seine zwei täglichen routines ("⚡ jarvis – morning briefing (mo–fr 8:00)", "pepper – abend-check-in (täglich 19:30)") als vorlage genannt: daraus wurden in [`anforderungen-v2.md`](./anforderungen-v2.md) die funktionalen anforderungen abgeleitet (immobilien bewusst ausgeschlossen, investment-updates nicht im kern) und ein **komplett neuer prototyp** gebaut — eigener ordner, eigener speicher (`mp2-db-v1`), die v0.4-beta bleibt unberührt und unter der haupt-adresse erreichbar, der mvp v2 unter `/mvp/`. kern: eingang (diktat + nachrichten + datei-importe → regelbasierte einordnung), energie-gerechter tagesplaner mit hauptfokus und transparentem "warum hier", abend-check-in mit einzahlung auf die jahresziele. **offen**: welcher der beiden wege (`app/` vs. `mvp/`) weitergeführt wird — nach markus' test entscheiden.
+
 ## 5. versionierung der iterationen
 
 - die app folgt **semver** (`v0.1.0`, `v0.2.0`, …) — solange kein stabiles v1 existiert, bleibt die major-version `0`.
@@ -73,6 +75,8 @@ zusätzlich (über den ursprünglichen vorschlag hinaus, aus nutzer-feedback): n
 - vor jeder größeren architekturentscheidung: erst hier und in `architecture.md` dokumentieren, dann implementieren.
 
 ## 8. nächste schritte
+
+0. **mvp v2 testen und entscheiden** (`mvp/`): passt der tages-assistent-ansatz besser als strom/kompass/verlauf? danach eine linie weiterführen, die andere einfrieren. naheliegende nächste schritte im mvp v2: live-anbindungen über ein kleines backend (Microsoft Graph für Teams/Outlook, IMAP/Gmail, WhatsApp Business API), echte ki für einordnung/zusammenfassung (`architecture.md` §2.1), meeting-vorbereitung, geburtstage, sonntags-reset.
 
 1. **challenges** (`architecture.md` §4.13) — noch nicht umgesetzt, bewusst als eigene, klar abgegrenzte nächste iteration zurückgestellt (1:1, einladungslink-basiert, auf der bestehenden supabase-basis).
 2. `native/` in Xcode öffnen und gegenprüfen/korrigieren — dieser code wurde nicht kompiliert und spiegelt den neuen v0.4.0-app-flow (strom/kompass/verlauf) noch nicht wider.
